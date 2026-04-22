@@ -167,14 +167,23 @@ const Dashboard = () => {
                   toast.success("Referral link copied");
                 }}><Copy className="h-4 w-4" /></Button>
               </div>
+              <Button asChild variant="ghost" size="sm" className="w-full mt-3"><Link to="/referrals">View earnings breakdown →</Link></Button>
             </Card>
 
             <Card className="glass-card p-6 rounded-xl">
               <h3 className="font-display text-xl font-semibold mb-2">Withdraw</h3>
               <p className="text-sm text-muted-foreground mb-4">Minimum ${settings.min_withdrawal}. One request per 24h.</p>
               <Button asChild variant="hero" className="w-full"><Link to="/withdraw">Request withdrawal</Link></Button>
+              <Button asChild variant="ghost" size="sm" className="w-full mt-2"><Link to="/requests">View request status →</Link></Button>
             </Card>
           </div>
+        </div>
+
+        {/* Quick links */}
+        <div className="grid sm:grid-cols-3 gap-3 mt-6">
+          <Button asChild variant="outline" className="justify-start h-12"><Link to="/checkin-history">📅 Check-in history</Link></Button>
+          <Button asChild variant="outline" className="justify-start h-12"><Link to="/receipts">🧾 Task receipts</Link></Button>
+          <Button asChild variant="outline" className="justify-start h-12"><Link to="/requests">📋 My requests</Link></Button>
         </div>
 
         {/* Transactions */}

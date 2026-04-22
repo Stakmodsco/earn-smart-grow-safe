@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth, useIsAdmin } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Check, Eye, Flag, X } from "lucide-react";
+import { Check, Copy, Eye, Flag, RefreshCw, X } from "lucide-react";
 
 const Admin = () => {
   const { user, loading } = useAuth();
@@ -94,6 +94,7 @@ const Admin = () => {
             <TabsTrigger value="upgrades">Upgrades <Pill>{pendingUpgrades.length}</Pill></TabsTrigger>
             <TabsTrigger value="withdrawals">Withdrawals <Pill>{pendingWithdrawals.length}</Pill></TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
+            <TabsTrigger value="admins">Admins</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
 
@@ -173,9 +174,13 @@ const Admin = () => {
             </Card>
           </TabsContent>
 
+          <TabsContent value="admins">
+            <AdminInvitePanel inviteCode={settings.admin_invite_code} onRotated={loadAll} />
+          </TabsContent>
+
           <TabsContent value="settings">
             <div className="grid md:grid-cols-2 gap-4">
-              {Object.entries(settings).map(([key, value]) => (
+              {Object.entries(settings).filter(([k]) => k !== "admin_invite_code").map(([key, value]) => (
                 <SettingEditor key={key} settingKey={key} value={value} onSave={(v) => saveSetting(key, v)} />
               ))}
             </div>
@@ -200,6 +205,69 @@ const SettingEditor = ({ settingKey, value, onSave }: { settingKey: string; valu
   );
 };
 
+const AdminInvitePanel = ({ inviteCode, onRotated }: { inviteCode: string | undefined; onRotated: () => void }) => {
+  const [admins, setAdmins] = useState<any[]>([]);
+  const [busy, setBusy] = useState(false);
+
+  const loadAdmins = async () => {
+    const { data: roles } = await supabase.from("user_roles").select("user_id, created_at").eq("role", "admin");
+    if (!roles?.length) { setAdmins([]); return; }
+    const { data: profs } = await supabase.from("profiles").select("id, email, full_name").in("id", roles.map(r => r.user_id));
+    setAdmins((profs ?? []).map(p => ({ ...p, granted_at: roles.find(r => r.user_id === p.id)?.created_at })));
+  };
+  useEffect(() => { loadAdmins(); }, []);
+
+  const rotate = async () => {
+    setBusy(true);
+    const newCode = Array.from({ length: 12 }, () => "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[Math.floor(Math.random() * 32)]).join("");
+    const { error } = await supabase.from("app_settings").update({ value: newCode, updated_at: new Date().toISOString() }).eq("key", "admin_invite_code");
+    setBusy(false);
+    if (error) return toast.error(error.message);
+    toast.success("Code rotated");
+    onRotated();
+  };
+
+  const revoke = async (uid: string) => {
+    if (!confirm("Revoke admin access for this user?")) return;
+    const { error } = await supabase.from("user_roles").delete().eq("user_id", uid).eq("role", "admin");
+    if (error) return toast.error(error.message);
+    toast.success("Admin access revoked");
+    loadAdmins();
+  };
+
+  return (
+    <div className="grid md:grid-cols-2 gap-4">
+      <Card className="glass-card p-6 rounded-xl">
+        <h3 className="font-display text-xl font-semibold mb-2">Invite code</h3>
+        <p className="text-sm text-muted-foreground mb-4">Share with someone you trust. Single-use — auto-rotates after redemption. The user redeems it at <code className="text-primary">/become-admin</code>.</p>
+        <div className="flex items-center gap-2 bg-secondary/40 rounded-lg p-3 border border-border">
+          <code className="font-mono text-lg flex-1 tracking-widest">{inviteCode || "…"}</code>
+          <Button size="sm" variant="ghost" onClick={() => { navigator.clipboard.writeText(inviteCode ?? ""); toast.success("Copied"); }}><Copy className="h-4 w-4" /></Button>
+        </div>
+        <Button size="sm" variant="outline" className="mt-3 w-full" onClick={rotate} disabled={busy}>
+          <RefreshCw className="h-4 w-4 mr-2" /> Rotate code now
+        </Button>
+      </Card>
+
+      <Card className="glass-card p-6 rounded-xl">
+        <h3 className="font-display text-xl font-semibold mb-4">Current admins ({admins.length})</h3>
+        {admins.length === 0 ? <div className="text-sm text-muted-foreground">No admins yet.</div> : (
+          <div className="divide-y divide-border">
+            {admins.map((a) => (
+              <div key={a.id} className="py-3 flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium">{a.full_name || "—"}</div>
+                  <div className="text-xs text-muted-foreground">{a.email}</div>
+                </div>
+                <Button size="sm" variant="ghost" onClick={() => revoke(a.id)}>Revoke</Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+};
 const Th = ({ children }: any) => <th className="text-left font-medium pb-2 px-2">{children}</th>;
 const Td = ({ children, className = "" }: any) => <td className={`py-3 px-2 ${className}`}>{children}</td>;
 const Pill = ({ children }: any) => <span className="ml-2 text-xs bg-primary/15 text-primary rounded-full px-2 py-0.5">{children}</span>;
