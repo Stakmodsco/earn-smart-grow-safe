@@ -252,6 +252,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      bootstrap_first_admin: { Args: never; Returns: boolean }
+      claim_admin_with_code: { Args: { _code: string }; Returns: boolean }
       gen_referral_code: { Args: never; Returns: string }
       has_role: {
         Args: {
