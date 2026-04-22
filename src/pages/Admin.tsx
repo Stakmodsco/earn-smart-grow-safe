@@ -94,6 +94,7 @@ const Admin = () => {
             <TabsTrigger value="upgrades">Upgrades <Pill>{pendingUpgrades.length}</Pill></TabsTrigger>
             <TabsTrigger value="withdrawals">Withdrawals <Pill>{pendingWithdrawals.length}</Pill></TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
+            <TabsTrigger value="admins">Admins</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
 
@@ -173,9 +174,13 @@ const Admin = () => {
             </Card>
           </TabsContent>
 
+          <TabsContent value="admins">
+            <AdminInvitePanel inviteCode={settings.admin_invite_code} onRotated={loadAll} />
+          </TabsContent>
+
           <TabsContent value="settings">
             <div className="grid md:grid-cols-2 gap-4">
-              {Object.entries(settings).map(([key, value]) => (
+              {Object.entries(settings).filter(([k]) => k !== "admin_invite_code").map(([key, value]) => (
                 <SettingEditor key={key} settingKey={key} value={value} onSave={(v) => saveSetting(key, v)} />
               ))}
             </div>
