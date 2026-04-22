@@ -10,6 +10,11 @@ import Dashboard from "./pages/Dashboard.tsx";
 import Upgrade from "./pages/Upgrade.tsx";
 import Withdraw from "./pages/Withdraw.tsx";
 import Admin from "./pages/Admin.tsx";
+import Referrals from "./pages/Referrals.tsx";
+import Receipts from "./pages/Receipts.tsx";
+import CheckinHistory from "./pages/CheckinHistory.tsx";
+import Requests from "./pages/Requests.tsx";
+import BecomeAdmin from "./pages/BecomeAdmin.tsx";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +31,11 @@ const App = () => (
           <Route path="/upgrade" element={<Upgrade />} />
           <Route path="/withdraw" element={<Withdraw />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/become-admin" element={<BecomeAdmin />} />
+          <Route path="/referrals" element={<Referrals />} />
+          <Route path="/receipts" element={<Receipts />} />
+          <Route path="/checkin-history" element={<CheckinHistory />} />
+          <Route path="/requests" element={<Requests />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
