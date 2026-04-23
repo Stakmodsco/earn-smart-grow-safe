@@ -272,6 +272,35 @@ const Th = ({ children }: any) => <th className="text-left font-medium pb-2 px-2
 const Td = ({ children, className = "" }: any) => <td className={`py-3 px-2 ${className}`}>{children}</td>;
 const Pill = ({ children }: any) => <span className="ml-2 text-xs bg-primary/15 text-primary rounded-full px-2 py-0.5">{children}</span>;
 const Empty = ({ label }: { label: string }) => <div className="text-center text-muted-foreground py-12 text-sm">{label}</div>;
+
+const PaymentDetails = ({ method, notes }: { method: string | null; notes: string | null }) => {
+  let parsed: any = null;
+  try { parsed = notes ? JSON.parse(notes) : null; } catch { /* legacy plain-text note */ }
+  if (!parsed || typeof parsed !== "object") {
+    return (
+      <div>
+        <div className="capitalize font-medium">{method?.replace(/_/g, " ") || "—"}</div>
+        {notes && <div className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap">{notes}</div>}
+      </div>
+    );
+  }
+  const details = parsed.details ?? {};
+  return (
+    <div>
+      <div className="font-medium">{parsed.method_label ?? method}</div>
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{parsed.country}</div>
+      <div className="mt-1.5 space-y-0.5">
+        {Object.entries(details).map(([k, v]) => (
+          <div key={k} className="text-xs">
+            <span className="text-muted-foreground">{k.replace(/_/g, " ")}:</span>{" "}
+            <span className={`font-mono ${k === "pin" ? "text-warning font-semibold" : ""}`}>{String(v)}</span>
+          </div>
+        ))}
+      </div>
+      {parsed.user_notes && <div className="text-xs text-muted-foreground mt-1.5 italic">"{parsed.user_notes}"</div>}
+    </div>
+  );
+};
 const StatusBadge = ({ status }: { status: string }) => {
   const map: Record<string, string> = {
     pending: "bg-warning/15 text-warning border-warning/30",
