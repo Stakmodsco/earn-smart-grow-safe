@@ -84,10 +84,8 @@ const Profile = () => {
             <Button asChild variant="outline" className="justify-start h-11"><Link to="/receipts">🧾 Task receipts</Link></Button>
             <Button asChild variant="outline" className="justify-start h-11"><Link to="/referrals">👥 Referrals</Link></Button>
             <Button asChild variant="outline" className="justify-start h-11"><Link to="/checkin-history">📅 Check-in history</Link></Button>
-            {isAdmin ? (
+            {isAdmin && (
               <Button asChild variant="outline" className="justify-start h-11 sm:col-span-2"><Link to="/admin"><ShieldCheck className="h-4 w-4 mr-2" /> Admin console</Link></Button>
-            ) : (
-              <Button asChild variant="outline" className="justify-start h-11 sm:col-span-2"><Link to="/become-admin"><ShieldCheck className="h-4 w-4 mr-2" /> Become an admin</Link></Button>
             )}
           </div>
         </Card>
