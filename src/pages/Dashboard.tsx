@@ -141,7 +141,7 @@ const Dashboard = () => {
           <div className="grid grid-cols-3 gap-2 mt-6">
             <HeroLink to="/requests" icon={ListChecks} label="History" />
             <HeroLink to="/earnings" icon={Banknote} label="Earnings" />
-            <HeroLink to="/admin" icon={Headphones} label="Support" />
+            <HeroLink to="/profile" icon={Headphones} label="Support" />
           </div>
         </Card>
 
