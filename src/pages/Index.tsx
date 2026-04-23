@@ -36,10 +36,6 @@ const Index = () => {
       <section className="relative overflow-hidden">
         <div className="container py-24 md:py-32 max-w-5xl">
           <div className="animate-fade-in">
-            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary/40 px-3 py-1.5 text-xs text-muted-foreground mb-8">
-              <span className="h-1.5 w-1.5 rounded-full bg-primary animate-shimmer" />
-              Built on transparent earning rules
-            </div>
             <h1 className="font-display text-5xl md:text-7xl font-semibold leading-[1.05] text-balance">
               Earn through structured
               <span className="block bg-gradient-emerald bg-clip-text text-transparent"> digital activities.</span>

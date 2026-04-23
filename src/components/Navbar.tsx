@@ -34,13 +34,9 @@ export const Navbar = () => {
           )}
           {user ? (
             <>
-              {isAdmin ? (
+              {isAdmin && (
                 <Button variant="ghost" size="sm" onClick={() => navigate("/admin")}>
                   <Shield className="h-4 w-4 mr-1" /> Admin
-                </Button>
-              ) : (
-                <Button variant="ghost" size="sm" onClick={() => navigate("/become-admin")}>
-                  <Shield className="h-4 w-4 mr-1" />
                 </Button>
               )}
               <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>Dashboard</Button>
