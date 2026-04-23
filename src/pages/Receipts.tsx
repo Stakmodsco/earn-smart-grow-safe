@@ -108,6 +108,7 @@ const Receipts = () => {
 
         <div className="mt-8"><Button asChild variant="outline"><Link to="/dashboard">← Dashboard</Link></Button></div>
       </div>
+      <BottomNav />
     </div>
   );
 };

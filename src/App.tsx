@@ -15,6 +15,10 @@ import Receipts from "./pages/Receipts.tsx";
 import CheckinHistory from "./pages/CheckinHistory.tsx";
 import Requests from "./pages/Requests.tsx";
 import BecomeAdmin from "./pages/BecomeAdmin.tsx";
+import Activities from "./pages/Activities.tsx";
+import Profile from "./pages/Profile.tsx";
+import Earnings from "./pages/Earnings.tsx";
+import Payment from "./pages/Payment.tsx";
 
 const queryClient = new QueryClient();
 
@@ -31,7 +35,14 @@ const App = () => (
           <Route path="/upgrade" element={<Upgrade />} />
           <Route path="/withdraw" element={<Withdraw />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/upgrade" element={<Upgrade />} />
+          <Route path="/payment/:level" element={<Payment />} />
+          <Route path="/withdraw" element={<Withdraw />} />
+          <Route path="/admin" element={<Admin />} />
           <Route path="/become-admin" element={<BecomeAdmin />} />
+          <Route path="/activities" element={<Activities />} />
+          <Route path="/earnings" element={<Earnings />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="/referrals" element={<Referrals />} />
           <Route path="/receipts" element={<Receipts />} />
           <Route path="/checkin-history" element={<CheckinHistory />} />
