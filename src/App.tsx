@@ -33,9 +33,6 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/upgrade" element={<Upgrade />} />
-          <Route path="/withdraw" element={<Withdraw />} />
-          <Route path="/admin" element={<Admin />} />
-          <Route path="/upgrade" element={<Upgrade />} />
           <Route path="/payment/:level" element={<Payment />} />
           <Route path="/withdraw" element={<Withdraw />} />
           <Route path="/admin" element={<Admin />} />
