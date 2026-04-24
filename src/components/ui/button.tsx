@@ -5,18 +5,19 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 btn-press",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-soft",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        outline: "border border-border bg-transparent hover:bg-secondary text-foreground",
+        default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-soft btn-shine",
+        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 btn-shine",
+        outline: "border border-border bg-background/40 backdrop-blur-md hover:bg-secondary/70 hover:border-primary/40 text-foreground",
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-secondary/60 hover:text-foreground text-muted-foreground",
         link: "text-primary underline-offset-4 hover:underline",
-        hero: "bg-gradient-emerald text-primary-foreground hover:opacity-95 shadow-emerald font-semibold",
-        soft: "bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20",
+        hero: "bg-gradient-emerald text-primary-foreground hover:shadow-emerald hover:-translate-y-0.5 shadow-emerald font-semibold btn-shine",
+        soft: "bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 backdrop-blur-md",
+        glass: "glass-panel text-foreground hover:bg-card/80 hover:border-primary/40",
       },
       size: {
         default: "h-10 px-4 py-2",

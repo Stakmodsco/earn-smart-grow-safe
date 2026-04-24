@@ -12,8 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuth, useProfile } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Bitcoin, Building2, Copy, Smartphone, Upload, ArrowLeft, Ticket, Send, Wallet } from "lucide-react";
-import { COUNTRIES, findMethod, type MethodDef } from "@/lib/paymentMethods";
+import { Bitcoin, Building2, Copy, Smartphone, Upload, ArrowLeft, Ticket, Send, Wallet, ShieldCheck, AlertCircle } from "lucide-react";
+import { COUNTRIES, type MethodDef, type FieldDef } from "@/lib/paymentMethods";
 
 type StructuredInstr = {
   amount_label?: string;
@@ -29,6 +29,28 @@ type Instructions = string | StructuredInstr;
 
 const ICONS = { Building2, Bitcoin, Smartphone, Ticket, Send, Wallet } as const;
 
+// Validate a single field value against its schema. Returns error string or null.
+function validateField(field: FieldDef, raw: string): string | null {
+  const value = (raw ?? "").trim();
+  if (field.required && !value) return `${field.label} is required`;
+  if (!value) return null; // optional & empty
+  if (field.minLength && value.length < field.minLength) {
+    return `${field.label} must be at least ${field.minLength} characters`;
+  }
+  if (field.maxLength && value.length > field.maxLength) {
+    return `${field.label} must be at most ${field.maxLength} characters`;
+  }
+  if (field.pattern) {
+    try {
+      const re = new RegExp(field.pattern);
+      if (!re.test(value)) return field.patternMessage ?? `${field.label} format is invalid`;
+    } catch {
+      // bad regex — skip
+    }
+  }
+  return null;
+}
+
 const Payment = () => {
   const { user, loading } = useAuth();
   const { profile } = useProfile(user?.id);
@@ -38,6 +60,7 @@ const Payment = () => {
   const [country, setCountry] = useState<string>("INT");
   const [method, setMethod] = useState<string>("bank");
   const [fields, setFields] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [file, setFile] = useState<File | null>(null);
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -50,14 +73,23 @@ const Payment = () => {
   }, []);
 
   const activeCountry = useMemo(() => COUNTRIES.find((c) => c.id === country) ?? COUNTRIES[0], [country]);
-  const activeMethod = useMemo(() => activeCountry.methods.find((m) => m.id === method) ?? activeCountry.methods[0], [activeCountry, method]);
+  const activeMethod = useMemo(
+    () => activeCountry.methods.find((m) => m.id === method) ?? activeCountry.methods[0],
+    [activeCountry, method],
+  );
 
-  // Reset method + fields whenever country changes
+  // Reset method + fields whenever country changes — prevents method/country mismatch.
   useEffect(() => {
     const first = activeCountry.methods[0]?.id;
     if (first) setMethod(first);
     setFields({});
+    setErrors({});
   }, [country]);
+
+  // Clear field errors when user edits.
+  useEffect(() => {
+    setErrors({});
+  }, [method]);
 
   if (loading) return null;
   if (!user) return <Navigate to="/auth" replace />;
@@ -91,35 +123,64 @@ const Payment = () => {
     toast.success("Copied");
   };
 
+  const setFieldValue = (key: string, value: string) => {
+    setFields((prev) => ({ ...prev, [key]: value }));
+    setErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+
   const submit = async () => {
-    // Validate dynamic fields
+    // 1. Country/method lock — guarantee the chosen method belongs to the chosen country.
+    const belongsToCountry = activeCountry.methods.some((m) => m.id === activeMethod.id);
+    if (!belongsToCountry) {
+      return toast.error("Selected payment method does not match your country. Please reselect.");
+    }
+
+    // 2. Validate every field for the selected method.
+    const newErrors: Record<string, string> = {};
     if (activeMethod.fields) {
       for (const f of activeMethod.fields) {
-        if (f.required && !(fields[f.key] ?? "").trim()) {
-          return toast.error(`${f.label} is required`);
+        const err = validateField(f, fields[f.key] ?? "");
+        if (err) newErrors[f.key] = err;
+        // Block disabled options (e.g. MTN MoMo on maintenance).
+        if (f.type === "select" && f.options) {
+          const chosen = f.options.find((o) => o.value === (fields[f.key] ?? ""));
+          if (chosen?.disabled) newErrors[f.key] = `${chosen.label.split(" — ")[0]} is currently unavailable.`;
         }
       }
     }
-    if (!activeMethod.proofOptional && !file) {
-      return toast.error("Please upload your payment proof");
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return toast.error("Please fix the highlighted fields before submitting.");
     }
+
+    // 3. Screenshot is now mandatory for ALL methods.
+    if (!file) {
+      return toast.error("A screenshot of your payment proof is required for every method.");
+    }
+    // Basic file sanity check
+    const okType = /^image\/(png|jpe?g|webp|heic|heif)$|^application\/pdf$/i.test(file.type);
+    if (!okType) {
+      return toast.error("Proof must be an image (PNG, JPG, WebP, HEIC) or a PDF.");
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      return toast.error("Proof file is too large. Max 8 MB.");
+    }
+
     setSubmitting(true);
     try {
-      let proofPath = "";
-      if (file) {
-        const ext = file.name.split(".").pop();
-        proofPath = `${user.id}/${Date.now()}.${ext}`;
-        const { error: upErr } = await supabase.storage.from("proofs").upload(proofPath, file, { upsert: false });
-        if (upErr) throw upErr;
-      } else {
-        // No file but proof is optional (voucher pin acts as proof). Submit a tiny text marker.
-        proofPath = `${user.id}/${Date.now()}-pin-only.txt`;
-        const blob = new Blob([`Pin-based submission for ${activeMethod.label} at ${new Date().toISOString()}`], { type: "text/plain" });
-        const { error: upErr } = await supabase.storage.from("proofs").upload(proofPath, blob, { upsert: false, contentType: "text/plain" });
-        if (upErr) throw upErr;
-      }
+      const ext = (file.name.split(".").pop() ?? "bin").toLowerCase().replace(/[^a-z0-9]/g, "");
+      const proofPath = `${user.id}/${Date.now()}.${ext || "bin"}`;
+      const { error: upErr } = await supabase.storage
+        .from("proofs")
+        .upload(proofPath, file, { upsert: false, contentType: file.type });
+      if (upErr) throw upErr;
 
-      // Build a structured notes payload so admins can verify pin/voucher details
+      // Build a structured notes payload so admins can verify pin/voucher details.
       const payload = {
         country: activeCountry.id,
         method: activeMethod.id,
@@ -130,7 +191,13 @@ const Payment = () => {
       const notesString = JSON.stringify(payload);
 
       const { data, error } = await supabase.functions.invoke("submit-upgrade", {
-        body: { target_level: targetLevel, payment_method: activeMethod.id, proof_url: proofPath, notes: notesString },
+        body: {
+          target_level: targetLevel,
+          payment_method: activeMethod.id,
+          country: activeCountry.id,
+          proof_url: proofPath,
+          notes: notesString,
+        },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -194,56 +261,62 @@ const Payment = () => {
         {m.description && <p className="text-sm text-muted-foreground">{m.description}</p>}
 
         <div className="grid gap-3">
-          {m.fields?.map((f) => (
-            <div key={f.key}>
-              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                {f.label} {f.required && <span className="text-destructive">*</span>}
-              </Label>
-              {f.type === "select" ? (
-                <Select
-                  value={fields[f.key] ?? ""}
-                  onValueChange={(v) => setFields((prev) => ({ ...prev, [f.key]: v }))}
-                >
-                  <SelectTrigger className="mt-1.5"><SelectValue placeholder="Select…" /></SelectTrigger>
-                  <SelectContent>
-                    {f.options?.map((o) => (
-                      <SelectItem key={o.value} value={o.value} disabled={o.disabled}>
-                        {o.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : f.type === "textarea" ? (
-                <Textarea
-                  className="mt-1.5"
-                  placeholder={f.placeholder}
-                  value={fields[f.key] ?? ""}
-                  onChange={(e) => setFields((prev) => ({ ...prev, [f.key]: e.target.value }))}
-                />
-              ) : (
-                <Input
-                  className="mt-1.5"
-                  placeholder={f.placeholder}
-                  value={fields[f.key] ?? ""}
-                  onChange={(e) => setFields((prev) => ({ ...prev, [f.key]: e.target.value }))}
-                  maxLength={120}
-                />
-              )}
-            </div>
-          ))}
+          {m.fields?.map((f) => {
+            const err = errors[f.key];
+            return (
+              <div key={f.key}>
+                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                  {f.label} {f.required && <span className="text-destructive">*</span>}
+                </Label>
+                {f.type === "select" ? (
+                  <Select
+                    value={fields[f.key] ?? ""}
+                    onValueChange={(v) => setFieldValue(f.key, v)}
+                  >
+                    <SelectTrigger className={`mt-1.5 ${err ? "border-destructive" : ""}`}><SelectValue placeholder="Select…" /></SelectTrigger>
+                    <SelectContent>
+                      {f.options?.map((o) => (
+                        <SelectItem key={o.value} value={o.value} disabled={o.disabled}>
+                          {o.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : f.type === "textarea" ? (
+                  <Textarea
+                    className={`mt-1.5 ${err ? "border-destructive" : ""}`}
+                    placeholder={f.placeholder}
+                    value={fields[f.key] ?? ""}
+                    onChange={(e) => setFieldValue(f.key, e.target.value)}
+                    maxLength={f.maxLength ?? 500}
+                  />
+                ) : (
+                  <Input
+                    className={`mt-1.5 ${err ? "border-destructive" : ""}`}
+                    placeholder={f.placeholder}
+                    value={fields[f.key] ?? ""}
+                    onChange={(e) => setFieldValue(f.key, e.target.value)}
+                    maxLength={f.maxLength ?? 120}
+                    inputMode={f.pattern?.includes("\\d") ? "numeric" : undefined}
+                  />
+                )}
+                {err ? (
+                  <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" /> {err}
+                  </p>
+                ) : f.patternMessage ? (
+                  <p className="text-[11px] text-muted-foreground/80 mt-1">{f.patternMessage}</p>
+                ) : null}
+              </div>
+            );
+          })}
         </div>
-
-        {m.proofOptional && (
-          <div className="text-xs text-muted-foreground bg-secondary/40 border border-border rounded-lg p-3">
-            🛈 The pin you entered will be verified manually by an admin. You only need to upload a screenshot if you also have one — it's optional for this method.
-          </div>
-        )}
       </div>
     );
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen mesh-bg">
       <Navbar />
       <div className="container max-w-2xl py-10">
         <Button asChild variant="ghost" size="sm" className="mb-4"><Link to="/upgrade"><ArrowLeft className="h-4 w-4 mr-1" /> Change tier</Link></Button>
@@ -268,9 +341,9 @@ const Payment = () => {
               <button
                 key={c.id}
                 onClick={() => setCountry(c.id)}
-                className={`rounded-lg border px-3 py-3 text-sm font-medium transition-colors ${
+                className={`rounded-lg border px-3 py-3 text-sm font-medium transition-all btn-press ${
                   country === c.id
-                    ? "border-primary bg-primary/10 text-primary"
+                    ? "border-primary bg-primary/10 text-primary shadow-emerald"
                     : "border-border hover:border-primary/40 text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -279,6 +352,10 @@ const Payment = () => {
               </button>
             ))}
           </div>
+          <p className="text-[11px] text-muted-foreground mt-3 flex items-center gap-1">
+            <ShieldCheck className="h-3 w-3 text-primary" />
+            Only methods available in <span className="font-medium text-foreground">{activeCountry.label}</span> can be submitted.
+          </p>
         </Card>
 
         <Accordion type="single" value={method} onValueChange={(v) => v && setMethod(v)} collapsible={false} className="space-y-3 mb-6">
@@ -302,12 +379,19 @@ const Payment = () => {
 
         <Card className="glass-card p-6 rounded-xl mb-6">
           <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-            Upload Proof of Payment {activeMethod.proofOptional && <span className="text-muted-foreground/70 normal-case">(optional)</span>}
+            Upload Proof of Payment <span className="text-destructive">*</span>
           </Label>
+          <div className="mt-2 rounded-lg bg-warning/10 border border-warning/30 p-3 text-xs text-foreground/90 flex gap-2">
+            <AlertCircle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+            <div>
+              <div className="font-medium mb-1">A screenshot is required for every payment method.</div>
+              <div className="text-muted-foreground">{activeMethod.proofHint ?? "Upload a clear screenshot of your payment receipt so admins can verify it."}</div>
+            </div>
+          </div>
           <label className="mt-3 block border-2 border-dashed border-border hover:border-primary/40 rounded-lg p-8 text-center cursor-pointer transition-colors">
             <Upload className="h-7 w-7 mx-auto text-primary mb-2" />
             <div className="text-sm font-medium">Click to upload</div>
-            <div className="text-xs text-muted-foreground mt-1">Screenshot or PDF of your transaction</div>
+            <div className="text-xs text-muted-foreground mt-1">PNG, JPG, WebP, HEIC or PDF — max 8 MB</div>
             <Input type="file" accept="image/*,application/pdf" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
           </label>
           {file && <div className="text-sm text-muted-foreground mt-3 text-center">📎 {file.name}</div>}

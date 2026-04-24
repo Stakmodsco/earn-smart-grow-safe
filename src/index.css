@@ -6,7 +6,77 @@
 
 @layer base {
   :root {
-    /* Monetra — Deep Navy + Emerald premium fintech */
+    /* Monetra — Light: airy ivory + emerald accents */
+    --background: 150 30% 97%;
+    --foreground: 222 45% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 45% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 45% 10%;
+
+    --primary: 158 72% 38%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 158 80% 55%;
+
+    --secondary: 150 20% 93%;
+    --secondary-foreground: 222 45% 12%;
+
+    --muted: 150 18% 94%;
+    --muted-foreground: 222 16% 40%;
+
+    --accent: 158 60% 45%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 222 45% 10%;
+
+    --success: 158 72% 38%;
+
+    --border: 150 20% 86%;
+    --input: 150 20% 90%;
+    --ring: 158 72% 38%;
+
+    --radius: 0.875rem;
+
+    /* Surfaces */
+    --surface-1: 0 0% 100%;
+    --surface-2: 150 25% 96%;
+    --surface-3: 150 20% 93%;
+
+    /* Gradients */
+    --gradient-hero: radial-gradient(ellipse 80% 60% at 50% 0%, hsl(158 80% 55% / 0.20), transparent 60%), radial-gradient(ellipse 60% 50% at 90% 30%, hsl(190 80% 60% / 0.15), transparent 60%), linear-gradient(180deg, hsl(150 35% 98%), hsl(150 25% 95%));
+    --gradient-emerald: linear-gradient(135deg, hsl(158 72% 38%), hsl(170 75% 50%), hsl(158 80% 55%));
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100% / 0.85), hsl(150 25% 97% / 0.65));
+    --gradient-border: linear-gradient(135deg, hsl(158 72% 44% / 0.5), hsl(190 80% 60% / 0.05));
+    --gradient-mesh: radial-gradient(at 0% 0%, hsl(158 72% 70% / 0.25) 0px, transparent 50%), radial-gradient(at 100% 100%, hsl(190 80% 70% / 0.20) 0px, transparent 50%);
+
+    /* Shadows */
+    --shadow-elegant: 0 20px 60px -20px hsl(158 72% 30% / 0.18), 0 2px 4px hsl(222 45% 10% / 0.04);
+    --shadow-emerald: 0 12px 40px -12px hsl(158 72% 44% / 0.45);
+    --shadow-soft: 0 1px 2px hsl(222 30% 20% / 0.06), 0 8px 24px -8px hsl(158 72% 30% / 0.10);
+    --shadow-glass: inset 0 1px 0 hsl(0 0% 100% / 0.6), 0 8px 32px hsl(158 72% 30% / 0.10);
+
+    /* Transitions */
+    --transition-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+
+    /* Sidebar */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 45% 15%;
+    --sidebar-primary: 158 72% 38%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 150 20% 94%;
+    --sidebar-accent-foreground: 222 45% 12%;
+    --sidebar-border: 150 20% 86%;
+    --sidebar-ring: 158 72% 38%;
+  }
+
+  .dark {
+    /* Monetra — Dark: deep navy + emerald premium fintech */
     --background: 222 45% 6%;
     --foreground: 210 30% 96%;
 
@@ -41,28 +111,21 @@
     --input: 222 30% 14%;
     --ring: 158 72% 44%;
 
-    --radius: 0.875rem;
-
-    /* Surfaces */
     --surface-1: 222 40% 9%;
     --surface-2: 222 36% 11%;
     --surface-3: 222 32% 14%;
 
-    /* Gradients */
-    --gradient-hero: radial-gradient(ellipse 80% 60% at 50% 0%, hsl(158 72% 44% / 0.18), transparent 60%), linear-gradient(180deg, hsl(222 50% 5%), hsl(222 45% 7%));
-    --gradient-emerald: linear-gradient(135deg, hsl(158 72% 44%), hsl(158 80% 60%));
-    --gradient-card: linear-gradient(180deg, hsl(222 40% 10%), hsl(222 38% 8%));
+    --gradient-hero: radial-gradient(ellipse 80% 60% at 50% 0%, hsl(158 72% 44% / 0.22), transparent 60%), radial-gradient(ellipse 60% 50% at 90% 30%, hsl(190 80% 50% / 0.12), transparent 60%), linear-gradient(180deg, hsl(222 50% 5%), hsl(222 45% 7%));
+    --gradient-emerald: linear-gradient(135deg, hsl(158 72% 44%), hsl(170 75% 55%), hsl(158 80% 60%));
+    --gradient-card: linear-gradient(180deg, hsl(222 40% 12% / 0.85), hsl(222 38% 8% / 0.65));
     --gradient-border: linear-gradient(135deg, hsl(158 72% 44% / 0.4), hsl(158 80% 60% / 0.05));
+    --gradient-mesh: radial-gradient(at 0% 0%, hsl(158 72% 30% / 0.35) 0px, transparent 50%), radial-gradient(at 100% 100%, hsl(190 80% 30% / 0.30) 0px, transparent 50%);
 
-    /* Shadows */
     --shadow-elegant: 0 20px 60px -20px hsl(222 80% 2% / 0.6);
     --shadow-emerald: 0 12px 40px -12px hsl(158 72% 44% / 0.45);
     --shadow-soft: 0 1px 2px hsl(222 80% 2% / 0.4), 0 8px 24px -8px hsl(222 80% 2% / 0.4);
+    --shadow-glass: inset 0 1px 0 hsl(0 0% 100% / 0.06), 0 8px 32px hsl(0 0% 0% / 0.4);
 
-    /* Transitions */
-    --transition-smooth: cubic-bezier(0.22, 1, 0.36, 1);
-
-    /* Sidebar (admin) */
     --sidebar-background: 222 45% 6%;
     --sidebar-foreground: 210 30% 90%;
     --sidebar-primary: 158 72% 44%;
@@ -87,6 +150,7 @@
     background-image: var(--gradient-hero);
     background-attachment: fixed;
     min-height: 100vh;
+    transition: background-color 0.4s var(--transition-smooth), color 0.4s var(--transition-smooth);
   }
   h1, h2, h3, .font-display {
     font-family: 'Fraunces', Georgia, serif;
@@ -97,8 +161,17 @@
 @layer components {
   .glass-card {
     background: var(--gradient-card);
-    border: 1px solid hsl(var(--border));
-    box-shadow: var(--shadow-elegant);
+    border: 1px solid hsl(var(--border) / 0.6);
+    box-shadow: var(--shadow-elegant), var(--shadow-glass);
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+  }
+  .glass-panel {
+    background: hsl(var(--card) / 0.55);
+    border: 1px solid hsl(var(--border) / 0.5);
+    backdrop-filter: blur(24px) saturate(150%);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+    box-shadow: var(--shadow-glass);
   }
   .emerald-glow {
     box-shadow: var(--shadow-emerald);
@@ -109,5 +182,52 @@
   .hairline {
     background: linear-gradient(90deg, transparent, hsl(var(--border)), transparent);
     height: 1px;
+  }
+  .mesh-bg {
+    background-image: var(--gradient-mesh);
+  }
+  /* Shiny button sweep */
+  .btn-shine {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .btn-shine::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg, transparent 30%, hsl(0 0% 100% / 0.25) 50%, transparent 70%);
+    transform: translateX(-120%);
+    transition: transform 0.8s var(--transition-smooth);
+    pointer-events: none;
+  }
+  .btn-shine:hover::before {
+    transform: translateX(120%);
+  }
+  .btn-press {
+    transition: transform 0.18s var(--transition-smooth), box-shadow 0.25s var(--transition-smooth), opacity 0.2s;
+  }
+  .btn-press:hover {
+    transform: translateY(-1px);
+  }
+  .btn-press:active {
+    transform: translateY(0) scale(0.98);
+  }
+}
+
+@layer utilities {
+  .animate-fade-up {
+    animation: fade-up 0.5s var(--transition-smooth) both;
+  }
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulse-ring {
+    0% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.5); }
+    100% { box-shadow: 0 0 0 16px hsl(var(--primary) / 0); }
+  }
+  .animate-pulse-ring {
+    animation: pulse-ring 1.6s var(--transition-smooth) infinite;
   }
 }

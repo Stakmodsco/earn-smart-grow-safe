@@ -1,5 +1,14 @@
 import { corsHeaders, json, getServiceClient, getUser, getSetting } from "../_shared/utils.ts";
 
+// Mirror of the country/method catalog used on the client. Keeping this list here
+// means the server can reject any method that doesn't belong to the declared country.
+const COUNTRY_METHODS: Record<string, string[]> = {
+  INT: ["bank", "crypto", "mobile_money"],
+  ZA: ["za_voucher", "za_cashsend"],
+  GH: ["gh_mobile_wallet"],
+};
+const ALL_METHODS = new Set(Object.values(COUNTRY_METHODS).flat());
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
@@ -9,12 +18,26 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const targetLevel = Number(body.target_level);
     const paymentMethod = String(body.payment_method || "").trim();
+    const country = String(body.country || "").trim();
     const proofUrl = String(body.proof_url || "").trim();
-    const notes = String(body.notes || "").slice(0, 500);
+    const notes = String(body.notes || "").slice(0, 2000);
 
     if (![1, 2, 3].includes(targetLevel)) return json({ error: "invalid level" }, 400);
     if (!paymentMethod) return json({ error: "payment method required" }, 400);
+    if (!ALL_METHODS.has(paymentMethod)) return json({ error: "unknown payment method" }, 400);
     if (!proofUrl) return json({ error: "proof required" }, 400);
+
+    // Country / method must match. If country missing, derive it from the method.
+    let resolvedCountry = country;
+    if (!resolvedCountry) {
+      resolvedCountry = Object.entries(COUNTRY_METHODS).find(([, list]) =>
+        list.includes(paymentMethod),
+      )?.[0] ?? "";
+    }
+    const allowed = COUNTRY_METHODS[resolvedCountry];
+    if (!allowed || !allowed.includes(paymentMethod)) {
+      return json({ error: "payment method does not match the selected country" }, 400);
+    }
 
     const svc = getServiceClient();
     const { data: profile } = await svc.from("profiles").select("*").eq("id", user.id).maybeSingle();
