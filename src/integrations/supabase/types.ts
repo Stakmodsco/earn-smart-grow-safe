@@ -121,6 +121,77 @@ export type Database = {
         }
         Relationships: []
       }
+      task_catalog: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          id: string
+          min_level: number
+          reward: number
+          sort_order: number
+          task_type: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          min_level?: number
+          reward?: number
+          sort_order?: number
+          task_type?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          min_level?: number
+          reward?: number
+          sort_order?: number
+          task_type?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      task_completions: {
+        Row: {
+          catalog_id: string
+          completed_at: string
+          id: string
+          reward: number
+          user_id: string
+        }
+        Insert: {
+          catalog_id: string
+          completed_at?: string
+          id?: string
+          reward?: number
+          user_id: string
+        }
+        Update: {
+          catalog_id?: string
+          completed_at?: string
+          id?: string
+          reward?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_completions_catalog_id_fkey"
+            columns: ["catalog_id"]
+            isOneToOne: false
+            referencedRelation: "task_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasks_log: {
         Row: {
           completed_at: string
@@ -141,6 +212,30 @@ export type Database = {
           id?: string
           reward?: number
           task_type?: Database["public"]["Enums"]["task_type"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tile_unlocks: {
+        Row: {
+          fee_paid: number
+          id: string
+          tile_id: string
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          fee_paid?: number
+          id?: string
+          tile_id: string
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          fee_paid?: number
+          id?: string
+          tile_id?: string
+          unlocked_at?: string
           user_id?: string
         }
         Relationships: []

@@ -94,6 +94,7 @@ const Admin = () => {
             <TabsTrigger value="upgrades">Upgrades <Pill>{pendingUpgrades.length}</Pill></TabsTrigger>
             <TabsTrigger value="withdrawals">Withdrawals <Pill>{pendingWithdrawals.length}</Pill></TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
+            <TabsTrigger value="tasks">Tasks</TabsTrigger>
             <TabsTrigger value="admins">Admins</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
@@ -172,6 +173,10 @@ const Admin = () => {
                   </tr>))}</tbody>
               </table>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="tasks">
+            <TaskCatalogPanel />
           </TabsContent>
 
           <TabsContent value="admins">
@@ -260,6 +265,120 @@ const AdminInvitePanel = ({ inviteCode, onRotated }: { inviteCode: string | unde
                   <div className="text-xs text-muted-foreground">{a.email}</div>
                 </div>
                 <Button size="sm" variant="ghost" onClick={() => revoke(a.id)}>Revoke</Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+};
+
+const TaskCatalogPanel = () => {
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [draft, setDraft] = useState({ title: "", description: "", task_type: "watch", reward: "0.10", min_level: "1" });
+  const [busy, setBusy] = useState(false);
+
+  const load = async () => {
+    const { data } = await supabase.from("task_catalog").select("*").order("sort_order", { ascending: true });
+    setTasks(data ?? []);
+  };
+  useEffect(() => { load(); }, []);
+
+  const create = async () => {
+    if (!draft.title.trim()) return toast.error("Title is required");
+    setBusy(true);
+    const { error } = await supabase.from("task_catalog").insert({
+      title: draft.title.trim(),
+      description: draft.description.trim() || null,
+      task_type: draft.task_type,
+      reward: Number(draft.reward) || 0,
+      min_level: Number(draft.min_level) || 1,
+      sort_order: tasks.length + 1,
+    });
+    setBusy(false);
+    if (error) return toast.error(error.message);
+    toast.success("Task added — users will see it on their next refresh");
+    setDraft({ title: "", description: "", task_type: "watch", reward: "0.10", min_level: "1" });
+    load();
+  };
+
+  const toggleActive = async (id: string, active: boolean) => {
+    const { error } = await supabase.from("task_catalog").update({ active: !active, updated_at: new Date().toISOString() }).eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success(!active ? "Task activated" : "Task paused");
+    load();
+  };
+
+  const remove = async (id: string) => {
+    if (!confirm("Delete this task? Existing completions will be removed too.")) return;
+    const { error } = await supabase.from("task_catalog").delete().eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Deleted");
+    load();
+  };
+
+  return (
+    <div className="grid lg:grid-cols-3 gap-4">
+      <Card className="glass-card p-6 rounded-xl lg:col-span-1">
+        <h3 className="font-display text-lg font-semibold mb-1">Add a task</h3>
+        <p className="text-xs text-muted-foreground mb-4">
+          Once a user completes a task it auto-rotates to the next active one in their list.
+        </p>
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs uppercase tracking-wide text-muted-foreground">Title</label>
+            <Input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="Watch sponsor video #4" />
+          </div>
+          <div>
+            <label className="text-xs uppercase tracking-wide text-muted-foreground">Description</label>
+            <Input value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} placeholder="Optional details" />
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <label className="text-xs uppercase tracking-wide text-muted-foreground">Type</label>
+              <select value={draft.task_type} onChange={(e) => setDraft({ ...draft, task_type: e.target.value })}
+                className="w-full h-10 rounded-md border border-input bg-background px-2 text-sm">
+                <option value="watch">watch</option>
+                <option value="spin">spin</option>
+                <option value="checkin">checkin</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs uppercase tracking-wide text-muted-foreground">Reward $</label>
+              <Input type="number" step="0.01" value={draft.reward} onChange={(e) => setDraft({ ...draft, reward: e.target.value })} />
+            </div>
+            <div>
+              <label className="text-xs uppercase tracking-wide text-muted-foreground">Min lvl</label>
+              <Input type="number" value={draft.min_level} onChange={(e) => setDraft({ ...draft, min_level: e.target.value })} />
+            </div>
+          </div>
+          <Button variant="hero" className="w-full" onClick={create} disabled={busy}>
+            {busy ? "Adding…" : "Add task"}
+          </Button>
+        </div>
+      </Card>
+
+      <Card className="glass-card p-6 rounded-xl lg:col-span-2">
+        <h3 className="font-display text-lg font-semibold mb-4">Task catalog ({tasks.length})</h3>
+        {tasks.length === 0 ? <Empty label="No tasks yet — add one to get started" /> : (
+          <div className="divide-y divide-border">
+            {tasks.map((t) => (
+              <div key={t.id} className="py-3 flex items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-sm truncate">{t.title}</span>
+                    {!t.active && <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded border border-border text-muted-foreground">paused</span>}
+                  </div>
+                  {t.description && <div className="text-xs text-muted-foreground truncate">{t.description}</div>}
+                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                    {t.task_type} · L{t.min_level}+ · ${Number(t.reward).toFixed(2)}
+                  </div>
+                </div>
+                <Button size="sm" variant="ghost" onClick={() => toggleActive(t.id, t.active)}>
+                  {t.active ? "Pause" : "Activate"}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => remove(t.id)}><X className="h-4 w-4" /></Button>
               </div>
             ))}
           </div>

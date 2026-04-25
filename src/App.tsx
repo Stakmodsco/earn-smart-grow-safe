@@ -20,6 +20,8 @@ import Activities from "./pages/Activities.tsx";
 import Profile from "./pages/Profile.tsx";
 import Earnings from "./pages/Earnings.tsx";
 import Payment from "./pages/Payment.tsx";
+import DailyCheckin from "./pages/DailyCheckin.tsx";
+import { SupportBot } from "@/components/SupportBot";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +32,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <UpgradeNagModal />
+        <SupportBot />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
@@ -45,6 +48,7 @@ const App = () => (
           <Route path="/referrals" element={<Referrals />} />
           <Route path="/receipts" element={<Receipts />} />
           <Route path="/checkin-history" element={<CheckinHistory />} />
+          <Route path="/daily-checkin" element={<DailyCheckin />} />
           <Route path="/requests" element={<Requests />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

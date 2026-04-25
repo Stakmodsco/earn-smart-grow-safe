@@ -11,11 +11,13 @@ import {
   Calendar,
   Crown,
   Link2,
+  Lock,
   Play,
   Sparkles,
   UserPlus,
   Users,
   ChevronRight,
+  CheckCircle2,
 } from "lucide-react";
 
 type Settings = {
@@ -23,6 +25,8 @@ type Settings = {
   daily_task_limits: Record<string, number>;
   task_rewards: Record<string, Record<string, number>>;
   checkin_rewards: Record<string, number>;
+  tile_unlock_fees?: Record<string, number>;
+  tier_tile_unlocks?: Record<string, string[]>;
 };
 
 type Tile = {
@@ -31,7 +35,7 @@ type Tile = {
   title: string;
   subtitle: string;
   unlockLevel: number; // 0 = always unlocked
-  comingSoon?: boolean;
+  premium?: boolean; // true = can be unlocked à-la-carte with a fee
   to?: string;
   action?: "checkin" | "watch" | "spin";
 };
@@ -41,7 +45,10 @@ const Activities = () => {
   const { profile, refresh } = useProfile(user?.id);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [taskCounts, setTaskCounts] = useState<Record<string, number>>({});
+  const [unlocks, setUnlocks] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState<string | null>(null);
+  const [catalog, setCatalog] = useState<any[]>([]);
+  const [completions, setCompletions] = useState<Set<string>>(new Set());
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -55,14 +62,18 @@ const Activities = () => {
   const loadCounts = async () => {
     if (!user) return;
     const start = new Date(); start.setUTCHours(0, 0, 0, 0);
-    const { data } = await supabase
-      .from("tasks_log")
-      .select("task_type")
-      .eq("user_id", user.id)
-      .gte("completed_at", start.toISOString());
+    const [{ data: logs }, { data: ul }, { data: cat }, { data: comp }] = await Promise.all([
+      supabase.from("tasks_log").select("task_type").eq("user_id", user.id).gte("completed_at", start.toISOString()),
+      supabase.from("tile_unlocks").select("tile_id").eq("user_id", user.id),
+      supabase.from("task_catalog").select("*").eq("active", true).order("sort_order"),
+      supabase.from("task_completions").select("catalog_id").eq("user_id", user.id),
+    ]);
     const counts: Record<string, number> = {};
-    (data ?? []).forEach((r: any) => { counts[r.task_type] = (counts[r.task_type] ?? 0) + 1; });
+    (logs ?? []).forEach((r: any) => { counts[r.task_type] = (counts[r.task_type] ?? 0) + 1; });
     setTaskCounts(counts);
+    setUnlocks(new Set((ul ?? []).map((r: any) => r.tile_id)));
+    setCatalog(cat ?? []);
+    setCompletions(new Set((comp ?? []).map((r: any) => r.catalog_id)));
   };
   useEffect(() => { loadCounts(); /* eslint-disable-next-line */ }, [user]);
 
@@ -82,60 +93,31 @@ const Activities = () => {
   const checkinReward = settings.checkin_rewards[lvl] ?? 0;
   const canCheckin = !profile.last_checkin || (Date.now() - new Date(profile.last_checkin).getTime() >= 24 * 60 * 60 * 1000);
 
+  const fees = settings.tile_unlock_fees ?? {};
+  const tierFree = settings.tier_tile_unlocks?.[lvl] ?? [];
+
   const tiles: Tile[] = [
-    {
-      id: "watch",
-      icon: Play,
-      title: "Watch & Earn",
-      subtitle: profile.level >= 1
-        ? `+ $${watchReward.toFixed(2)} • ${watchDone}/${watchLimit} today`
-        : "Unlocks at Level 1",
-      unlockLevel: 1,
-      action: "watch",
-    },
-    {
-      id: "checkin",
-      icon: Calendar,
-      title: "Daily Check-in",
-      subtitle: canCheckin ? `+ $${checkinReward.toFixed(2)}` : "Available again in 24h",
-      unlockLevel: 0,
-      action: "checkin",
-    },
-    {
-      id: "spin",
-      icon: Sparkles,
-      title: "Spin & Win",
-      subtitle: profile.level >= 1
-        ? `+ $${spinReward.toFixed(2)} • ${spinDone}/${spinLimit} today`
-        : "Unlocks at Level 1",
-      unlockLevel: 1,
-      action: "spin",
-    },
-    {
-      id: "hookup",
-      icon: Link2,
-      title: "Connect Tasks",
-      subtitle: "Coming soon — partner integrations",
-      unlockLevel: 2,
-      comingSoon: true,
-    },
-    {
-      id: "vip",
-      icon: Crown,
-      title: "VIP Stream",
-      subtitle: "Premium tasks for Level 3 members",
-      unlockLevel: 3,
-      comingSoon: true,
-    },
-    {
-      id: "creator",
-      icon: UserPlus,
-      title: "Become a Creator",
-      subtitle: "Apply to publish tasks (coming soon)",
-      unlockLevel: 3,
-      comingSoon: true,
-    },
+    { id: "watch", icon: Play, title: "Watch & Earn",
+      subtitle: profile.level >= 1 ? `+ $${watchReward.toFixed(2)} • ${watchDone}/${watchLimit} today` : "Unlocks at Level 1",
+      unlockLevel: 1, action: "watch" },
+    { id: "checkin", icon: Calendar, title: "Daily Check-in",
+      subtitle: canCheckin ? `+ $${checkinReward.toFixed(3)}` : "Available again in 24h",
+      unlockLevel: 0, action: "checkin" },
+    { id: "spin", icon: Sparkles, title: "Spin & Win",
+      subtitle: profile.level >= 1 ? `+ $${spinReward.toFixed(2)} • ${spinDone}/${spinLimit} today` : "Unlocks at Level 1",
+      unlockLevel: 1, action: "spin" },
+    { id: "hookup", icon: Link2, title: "Connect Tasks",
+      subtitle: "Partner integrations — unlock for $" + Number(fees.hookup ?? 0).toFixed(2),
+      unlockLevel: 0, premium: true },
+    { id: "vip", icon: Crown, title: "VIP Stream",
+      subtitle: "Premium tasks — unlock for $" + Number(fees.vip ?? 0).toFixed(2),
+      unlockLevel: 0, premium: true },
+    { id: "creator", icon: UserPlus, title: "Become a Creator",
+      subtitle: "Apply to publish tasks — unlock for $" + Number(fees.creator ?? 0).toFixed(2),
+      unlockLevel: 0, premium: true },
   ];
+
+  const isPremiumUnlocked = (id: string) => unlocks.has(id) || tierFree.includes(id);
 
   const invokeFn = async (fn: string, body: any = {}) => {
     setBusy(fn + JSON.stringify(body));
@@ -153,22 +135,35 @@ const Activities = () => {
   };
 
   const onTileClick = (t: Tile) => {
-    if (t.comingSoon) return;
+    // Level-locked tier features always redirect to /upgrade
     if (profile.level < t.unlockLevel) {
+      toast.info("Upgrade your tier to unlock this");
       navigate("/upgrade");
       return;
     }
+    // Premium tile that hasn't been individually unlocked yet
+    if (t.premium && !isPremiumUnlocked(t.id)) {
+      const fee = Number(fees[t.id] ?? 0);
+      if (!confirm(`Unlock "${t.title}" for $${fee.toFixed(2)} from your balance?`)) return;
+      invokeFn("unlock-tile", { tile_id: t.id });
+      return;
+    }
     if (t.action === "checkin") {
-      if (!canCheckin) return toast.info("Come back in 24h");
-      invokeFn("checkin");
+      // Send to dedicated check-in flow
+      navigate("/daily-checkin");
     } else if (t.action === "watch") {
       if (watchDone >= watchLimit) return toast.info("Daily limit reached");
       invokeFn("complete-task", { task_type: "watch" });
     } else if (t.action === "spin") {
       if (spinDone >= spinLimit) return toast.info("Daily limit reached");
       invokeFn("complete-task", { task_type: "spin" });
+    } else if (t.premium && isPremiumUnlocked(t.id)) {
+      toast.success(`${t.title} is unlocked — content coming soon`);
     }
   };
+
+  // Compute the "next" admin task (first uncompleted)
+  const nextTask = catalog.find((c) => !completions.has(c.id) && profile.level >= (c.min_level ?? 1));
 
   return (
     <div className="min-h-screen">
@@ -177,26 +172,32 @@ const Activities = () => {
         <div className="text-xs uppercase tracking-widest text-primary mb-2">Activities</div>
         <h1 className="font-display text-4xl font-semibold mb-2">Ways to earn</h1>
         <p className="text-muted-foreground mb-8">
-          Complete activities to earn rewards. Unlock more tasks by upgrading your account.
+          Complete activities to earn rewards. Unlock more tasks by upgrading or topping up.
         </p>
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
           {tiles.map((t) => {
-            const locked = profile.level < t.unlockLevel;
-            const isComing = !!t.comingSoon;
+            const tierLocked = profile.level < t.unlockLevel;
+            const premiumLocked = !!t.premium && !isPremiumUnlocked(t.id);
+            const locked = tierLocked || premiumLocked;
             const Icon = t.icon;
             return (
               <button
                 key={t.id}
                 onClick={() => onTileClick(t)}
-                disabled={isComing || (busy !== null)}
+                disabled={busy !== null}
                 className={`text-left glass-card rounded-xl p-5 relative transition-all hover:border-primary/40 ${
-                  locked || isComing ? "opacity-70" : "hover:translate-y-[-2px]"
+                  locked ? "opacity-80" : "hover:translate-y-[-2px]"
                 } disabled:cursor-not-allowed`}
               >
-                {(locked || isComing) && (
-                  <span className="absolute top-3 right-3 text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border border-border bg-secondary/60 text-muted-foreground">
-                    {isComing ? "Soon" : "Locked"}
+                {locked && (
+                  <span className="absolute top-3 right-3 h-6 w-6 rounded-full bg-secondary/80 border border-border grid place-items-center text-muted-foreground">
+                    <Lock className="h-3 w-3" />
+                  </span>
+                )}
+                {t.premium && isPremiumUnlocked(t.id) && (
+                  <span className="absolute top-3 right-3 text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border border-primary/40 bg-primary/10 text-primary flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3" /> Unlocked
                   </span>
                 )}
                 <div className="h-11 w-11 rounded-lg bg-primary/10 border border-primary/20 grid place-items-center mb-4">
@@ -208,6 +209,37 @@ const Activities = () => {
             );
           })}
         </div>
+
+        {/* Admin-managed task list (auto-rotates) */}
+        {catalog.length > 0 && (
+          <Card className="rounded-xl p-5 mb-6 glass-card">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <div className="font-display text-lg font-semibold">Today's task</div>
+                <div className="text-xs text-muted-foreground">Auto-rotates as you complete tasks ({completions.size}/{catalog.length} done)</div>
+              </div>
+            </div>
+            {nextTask ? (
+              <div className="flex items-center gap-4 p-3 rounded-lg border border-border bg-secondary/40">
+                <div className="h-10 w-10 rounded-lg bg-primary/15 border border-primary/20 grid place-items-center">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <div className="font-medium text-sm">{nextTask.title}</div>
+                  {nextTask.description && <div className="text-xs text-muted-foreground">{nextTask.description}</div>}
+                </div>
+                <div className="text-right">
+                  <div className="text-primary font-semibold tabular-nums text-sm">+ ${Number(nextTask.reward).toFixed(2)}</div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{nextTask.task_type}</div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground py-4 text-center">
+                You've completed every published task — check back soon for new ones!
+              </div>
+            )}
+          </Card>
+        )}
 
         {/* Refer & Earn banner */}
         <Link to="/referrals" className="block group">

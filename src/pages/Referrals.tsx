@@ -6,7 +6,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth, useProfile } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowUpRight, Calendar, CheckCircle2, MinusCircle, Play, Sparkles, TrendingUp, Users, X } from "lucide-react";
+import { ArrowUpRight, Calendar, CheckCircle2, Copy, Link as LinkIcon, MinusCircle, Play, Sparkles, TrendingUp, Users, X } from "lucide-react";
+import { toast } from "sonner";
 
 const Referrals = () => {
   const { user, loading } = useAuth();
@@ -49,7 +50,10 @@ const Referrals = () => {
       <Navbar />
       <div className="container py-10 max-w-5xl">
         <div className="text-xs uppercase tracking-widest text-primary mb-2">Referrals</div>
-        <h1 className="font-display text-4xl font-semibold mb-8">Your network earnings</h1>
+        <h1 className="font-display text-4xl font-semibold mb-6">Your network earnings</h1>
+
+        {/* Share link card */}
+        <ShareLinkCard code={profile.referral_code} />
 
         <div className="grid md:grid-cols-4 gap-4 mb-6">
           <Stat icon={Users} label="Level 1 referrals" value={l1.length.toString()} />
@@ -101,6 +105,50 @@ const Referrals = () => {
       </div>
       <BottomNav />
     </div>
+  );
+};
+
+const ShareLinkCard = ({ code }: { code: string }) => {
+  const link = `${window.location.origin}/auth?mode=signup&ref=${code}`;
+  const copy = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(`${label} copied!`);
+    } catch {
+      toast.error("Couldn't copy — copy manually");
+    }
+  };
+  const share = async () => {
+    if (navigator.share) {
+      try { await navigator.share({ title: "Join me on Monetra", text: "Earn rewards with me on Monetra:", url: link }); }
+      catch { /* user cancelled */ }
+    } else copy(link, "Share link");
+  };
+  return (
+    <Card className="glass-card p-6 rounded-xl mb-6 ring-1 ring-primary/30">
+      <div className="flex items-center gap-3 mb-3">
+        <div className="h-10 w-10 rounded-lg bg-primary/15 border border-primary/30 grid place-items-center">
+          <LinkIcon className="h-5 w-5 text-primary" />
+        </div>
+        <div>
+          <div className="font-display text-lg font-semibold">Your share link</div>
+          <div className="text-xs text-muted-foreground">Friends sign up via this link and you earn commissions automatically.</div>
+        </div>
+      </div>
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="flex-1 flex items-center gap-2 bg-secondary/40 rounded-lg p-2.5 border border-border min-w-0">
+          <code className="font-mono text-xs sm:text-sm truncate flex-1">{link}</code>
+        </div>
+        <Button variant="hero" onClick={() => copy(link, "Share link")}>
+          <Copy className="h-4 w-4" /> Copy link
+        </Button>
+        <Button variant="outline" onClick={share}>Share</Button>
+      </div>
+      <div className="text-xs text-muted-foreground mt-3 flex items-center gap-2">
+        Or share just your code: <code className="font-mono text-primary">{code}</code>
+        <button onClick={() => copy(code, "Code")} className="text-primary hover:underline">copy</button>
+      </div>
+    </Card>
   );
 };
 
