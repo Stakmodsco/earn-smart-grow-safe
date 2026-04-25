@@ -94,6 +94,7 @@ const Admin = () => {
             <TabsTrigger value="upgrades">Upgrades <Pill>{pendingUpgrades.length}</Pill></TabsTrigger>
             <TabsTrigger value="withdrawals">Withdrawals <Pill>{pendingWithdrawals.length}</Pill></TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
+            <TabsTrigger value="tasks">Tasks</TabsTrigger>
             <TabsTrigger value="admins">Admins</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
@@ -172,6 +173,10 @@ const Admin = () => {
                   </tr>))}</tbody>
               </table>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="tasks">
+            <TaskCatalogPanel />
           </TabsContent>
 
           <TabsContent value="admins">
