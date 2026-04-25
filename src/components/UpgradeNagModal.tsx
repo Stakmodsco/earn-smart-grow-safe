@@ -9,6 +9,10 @@ import { Crown, Sparkles, X } from "lucide-react";
 const NAG_INTERVAL_MS = 90_000; // 1m30s
 // Snooze when user clicks "Not now"
 const SNOOZE_MS = 60_000;
+// Per-tab key used to remember that the user clicked "Upgrade" — the nag
+// stays paused until either the upgrade lands (level > 0) OR the user
+// explicitly cancels.
+const UPGRADE_INTENT_KEY = "monetra:upgradeIntent";
 
 export const UpgradeNagModal = () => {
   const { user, loading } = useAuth();
@@ -19,14 +23,40 @@ export const UpgradeNagModal = () => {
   const nextAtRef = useRef<number>(Date.now() + NAG_INTERVAL_MS);
   const pausedRef = useRef(false);
 
-  // Pause the nag while the user is on the payment / upgrade flow,
-  // resume (and reset the timer) the moment they leave without completing.
+  // The user is "in the upgrade flow" if they're on /upgrade or /payment/*.
   const onPaymentFlow = pathname.startsWith("/payment") || pathname === "/upgrade";
+
+  // Read upgrade-intent flag (set when user clicks "Upgrade now").
+  const hasUpgradeIntent = () => {
+    try { return sessionStorage.getItem(UPGRADE_INTENT_KEY) === "1"; }
+    catch { return false; }
+  };
+  const setUpgradeIntent = (v: boolean) => {
+    try {
+      if (v) sessionStorage.setItem(UPGRADE_INTENT_KEY, "1");
+      else sessionStorage.removeItem(UPGRADE_INTENT_KEY);
+    } catch { /* ignore */ }
+  };
+
+  // Clear the intent flag the moment the user actually upgrades.
+  useEffect(() => {
+    if (profile && (profile.level ?? 0) > 0) setUpgradeIntent(false);
+  }, [profile]);
 
   useEffect(() => {
     if (loading || !user || !profile) return;
-    if ((profile.level ?? 0) > 0) return; // already upgraded
+    if ((profile.level ?? 0) > 0) return; // already upgraded — never nag
     if (profile.flagged) return;
+
+    // If they've expressed upgrade intent, suppress the nag entirely until
+    // either the upgrade completes (handled above) or they cancel from the
+    // modal itself. They can still navigate freely (e.g. to read FAQ) without
+    // the popup interrupting them.
+    if (hasUpgradeIntent()) {
+      pausedRef.current = true;
+      setOpen(false);
+      return;
+    }
 
     if (onPaymentFlow) {
       pausedRef.current = true;
@@ -34,7 +64,7 @@ export const UpgradeNagModal = () => {
       return;
     }
 
-    // Resuming: if we were paused, give the user a brief grace before nagging again.
+    // Resuming after a pause: brief grace period before the next prompt.
     if (pausedRef.current) {
       pausedRef.current = false;
       nextAtRef.current = Date.now() + 8_000;
@@ -42,9 +72,8 @@ export const UpgradeNagModal = () => {
 
     const tick = () => {
       if (pausedRef.current) return;
-      if (Date.now() >= nextAtRef.current) {
-        setOpen(true);
-      }
+      if (hasUpgradeIntent()) return;
+      if (Date.now() >= nextAtRef.current) setOpen(true);
     };
     const id = window.setInterval(tick, 1_000);
     return () => window.clearInterval(id);
@@ -58,7 +87,15 @@ export const UpgradeNagModal = () => {
   const goUpgrade = () => {
     setOpen(false);
     pausedRef.current = true;
+    setUpgradeIntent(true);
     navigate("/upgrade");
+  };
+
+  // "Cancel" inside the modal explicitly clears the upgrade intent so the
+  // nag will resume on its normal cadence again.
+  const cancelUpgrade = () => {
+    setUpgradeIntent(false);
+    dismiss();
   };
 
   if (!user || !profile || (profile.level ?? 0) > 0) return null;
@@ -66,7 +103,6 @@ export const UpgradeNagModal = () => {
   return (
     <Dialog open={open} onOpenChange={(v) => (v ? setOpen(true) : dismiss())}>
       <DialogContent className="glass-card border-primary/30 max-w-md p-0 overflow-hidden">
-        {/* Decorative gradient header */}
         <div className="relative h-32 bg-gradient-emerald flex items-center justify-center overflow-hidden">
           <div className="absolute inset-0 mesh-bg opacity-60" />
           <div className="relative h-16 w-16 rounded-full bg-background/20 backdrop-blur-md grid place-items-center animate-pulse-ring">
@@ -94,12 +130,12 @@ export const UpgradeNagModal = () => {
 
           <div className="mt-5 grid grid-cols-3 gap-2 text-center">
             {[
-              { label: "Bronze", price: "$25", color: "text-amber-600 dark:text-amber-400" },
-              { label: "Silver", price: "$50", color: "text-primary" },
-              { label: "Gold", price: "$100", color: "text-yellow-600 dark:text-yellow-400" },
+              { label: "Silver", price: "$25" },
+              { label: "Gold", price: "$50" },
+              { label: "Platinum", price: "$100" },
             ].map((t) => (
               <div key={t.label} className="rounded-lg border border-border bg-secondary/40 p-3">
-                <div className={`text-xs font-medium ${t.color}`}>{t.label}</div>
+                <div className="text-xs font-medium text-primary">{t.label}</div>
                 <div className="font-display text-lg font-semibold mt-1">{t.price}</div>
               </div>
             ))}
@@ -109,7 +145,7 @@ export const UpgradeNagModal = () => {
             <Button variant="hero" size="lg" className="w-full" onClick={goUpgrade}>
               <Sparkles className="h-4 w-4" /> Upgrade now
             </Button>
-            <Button variant="ghost" size="sm" className="w-full" onClick={dismiss}>
+            <Button variant="ghost" size="sm" className="w-full" onClick={cancelUpgrade}>
               Not now (remind me in 1 minute)
             </Button>
           </DialogFooter>

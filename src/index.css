@@ -6,134 +6,129 @@
 
 @layer base {
   :root {
-    /* Monetra — Light: airy ivory + emerald accents */
-    --background: 150 30% 97%;
-    --foreground: 222 45% 10%;
+    /* Monetra — Light: indigo / violet brand from logo */
+    --background: 240 30% 98%;
+    --foreground: 240 50% 8%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 45% 10%;
+    --card-foreground: 240 50% 8%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 45% 10%;
+    --popover-foreground: 240 50% 8%;
 
-    --primary: 158 72% 38%;
+    --primary: 247 70% 58%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 158 80% 55%;
+    --primary-glow: 258 80% 70%;
 
-    --secondary: 150 20% 93%;
-    --secondary-foreground: 222 45% 12%;
+    --secondary: 240 20% 94%;
+    --secondary-foreground: 240 45% 12%;
 
-    --muted: 150 18% 94%;
-    --muted-foreground: 222 16% 40%;
+    --muted: 240 18% 95%;
+    --muted-foreground: 240 12% 42%;
 
-    --accent: 158 60% 45%;
+    --accent: 258 70% 62%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 72% 50%;
     --destructive-foreground: 0 0% 100%;
 
     --warning: 38 92% 50%;
-    --warning-foreground: 222 45% 10%;
+    --warning-foreground: 240 50% 10%;
 
     --success: 158 72% 38%;
 
-    --border: 150 20% 86%;
-    --input: 150 20% 90%;
-    --ring: 158 72% 38%;
+    --border: 240 18% 88%;
+    --input: 240 18% 92%;
+    --ring: 247 70% 58%;
 
     --radius: 0.875rem;
 
-    /* Surfaces */
     --surface-1: 0 0% 100%;
-    --surface-2: 150 25% 96%;
-    --surface-3: 150 20% 93%;
+    --surface-2: 240 25% 97%;
+    --surface-3: 240 20% 94%;
 
-    /* Gradients */
-    --gradient-hero: radial-gradient(ellipse 80% 60% at 50% 0%, hsl(158 80% 55% / 0.20), transparent 60%), radial-gradient(ellipse 60% 50% at 90% 30%, hsl(190 80% 60% / 0.15), transparent 60%), linear-gradient(180deg, hsl(150 35% 98%), hsl(150 25% 95%));
-    --gradient-emerald: linear-gradient(135deg, hsl(158 72% 38%), hsl(170 75% 50%), hsl(158 80% 55%));
-    --gradient-card: linear-gradient(180deg, hsl(0 0% 100% / 0.85), hsl(150 25% 97% / 0.65));
-    --gradient-border: linear-gradient(135deg, hsl(158 72% 44% / 0.5), hsl(190 80% 60% / 0.05));
-    --gradient-mesh: radial-gradient(at 0% 0%, hsl(158 72% 70% / 0.25) 0px, transparent 50%), radial-gradient(at 100% 100%, hsl(190 80% 70% / 0.20) 0px, transparent 50%);
+    --gradient-hero: radial-gradient(ellipse 80% 60% at 50% 0%, hsl(247 80% 70% / 0.22), transparent 60%), radial-gradient(ellipse 60% 50% at 90% 30%, hsl(280 80% 65% / 0.15), transparent 60%), linear-gradient(180deg, hsl(240 35% 99%), hsl(240 25% 96%));
+    --gradient-emerald: linear-gradient(135deg, hsl(247 70% 58%), hsl(258 75% 65%), hsl(275 80% 70%));
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100% / 0.85), hsl(240 25% 97% / 0.65));
+    --gradient-border: linear-gradient(135deg, hsl(247 70% 58% / 0.5), hsl(280 80% 70% / 0.05));
+    --gradient-mesh: radial-gradient(at 0% 0%, hsl(247 70% 70% / 0.25) 0px, transparent 50%), radial-gradient(at 100% 100%, hsl(280 80% 70% / 0.20) 0px, transparent 50%);
 
-    /* Shadows */
-    --shadow-elegant: 0 20px 60px -20px hsl(158 72% 30% / 0.18), 0 2px 4px hsl(222 45% 10% / 0.04);
-    --shadow-emerald: 0 12px 40px -12px hsl(158 72% 44% / 0.45);
-    --shadow-soft: 0 1px 2px hsl(222 30% 20% / 0.06), 0 8px 24px -8px hsl(158 72% 30% / 0.10);
-    --shadow-glass: inset 0 1px 0 hsl(0 0% 100% / 0.6), 0 8px 32px hsl(158 72% 30% / 0.10);
+    --shadow-elegant: 0 20px 60px -20px hsl(247 70% 30% / 0.18), 0 2px 4px hsl(240 50% 10% / 0.04);
+    --shadow-emerald: 0 12px 40px -12px hsl(247 70% 58% / 0.45);
+    --shadow-soft: 0 1px 2px hsl(240 30% 20% / 0.06), 0 8px 24px -8px hsl(247 70% 30% / 0.10);
+    --shadow-glass: inset 0 1px 0 hsl(0 0% 100% / 0.6), 0 8px 32px hsl(247 70% 30% / 0.10);
 
-    /* Transitions */
     --transition-smooth: cubic-bezier(0.22, 1, 0.36, 1);
 
-    /* Sidebar */
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 222 45% 15%;
-    --sidebar-primary: 158 72% 38%;
+    --sidebar-foreground: 240 50% 15%;
+    --sidebar-primary: 247 70% 58%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 150 20% 94%;
-    --sidebar-accent-foreground: 222 45% 12%;
-    --sidebar-border: 150 20% 86%;
-    --sidebar-ring: 158 72% 38%;
+    --sidebar-accent: 240 20% 95%;
+    --sidebar-accent-foreground: 240 45% 12%;
+    --sidebar-border: 240 18% 88%;
+    --sidebar-ring: 247 70% 58%;
   }
 
   .dark {
-    /* Monetra — Dark: deep navy + emerald premium fintech */
-    --background: 222 45% 6%;
-    --foreground: 210 30% 96%;
+    /* Monetra — Dark: deep navy + indigo/violet (matches logo background) */
+    --background: 240 50% 6%;
+    --foreground: 240 25% 96%;
 
-    --card: 222 40% 9%;
-    --card-foreground: 210 30% 96%;
+    --card: 240 45% 9%;
+    --card-foreground: 240 25% 96%;
 
-    --popover: 222 42% 8%;
-    --popover-foreground: 210 30% 96%;
+    --popover: 240 45% 8%;
+    --popover-foreground: 240 25% 96%;
 
-    --primary: 158 72% 44%;
-    --primary-foreground: 222 47% 8%;
-    --primary-glow: 158 80% 60%;
+    --primary: 247 75% 65%;
+    --primary-foreground: 240 50% 8%;
+    --primary-glow: 268 85% 75%;
 
-    --secondary: 222 30% 14%;
-    --secondary-foreground: 210 30% 96%;
+    --secondary: 240 35% 14%;
+    --secondary-foreground: 240 25% 96%;
 
-    --muted: 222 28% 13%;
-    --muted-foreground: 215 18% 65%;
+    --muted: 240 30% 13%;
+    --muted-foreground: 240 15% 65%;
 
-    --accent: 158 60% 50%;
-    --accent-foreground: 222 47% 8%;
+    --accent: 268 70% 65%;
+    --accent-foreground: 240 50% 8%;
 
     --destructive: 0 72% 55%;
-    --destructive-foreground: 210 30% 98%;
+    --destructive-foreground: 240 25% 98%;
 
     --warning: 38 92% 55%;
-    --warning-foreground: 222 47% 8%;
+    --warning-foreground: 240 50% 8%;
 
-    --success: 158 72% 44%;
+    --success: 158 72% 50%;
 
-    --border: 222 30% 16%;
-    --input: 222 30% 14%;
-    --ring: 158 72% 44%;
+    --border: 240 32% 17%;
+    --input: 240 32% 14%;
+    --ring: 247 75% 65%;
 
-    --surface-1: 222 40% 9%;
-    --surface-2: 222 36% 11%;
-    --surface-3: 222 32% 14%;
+    --surface-1: 240 45% 9%;
+    --surface-2: 240 40% 11%;
+    --surface-3: 240 35% 14%;
 
-    --gradient-hero: radial-gradient(ellipse 80% 60% at 50% 0%, hsl(158 72% 44% / 0.22), transparent 60%), radial-gradient(ellipse 60% 50% at 90% 30%, hsl(190 80% 50% / 0.12), transparent 60%), linear-gradient(180deg, hsl(222 50% 5%), hsl(222 45% 7%));
-    --gradient-emerald: linear-gradient(135deg, hsl(158 72% 44%), hsl(170 75% 55%), hsl(158 80% 60%));
-    --gradient-card: linear-gradient(180deg, hsl(222 40% 12% / 0.85), hsl(222 38% 8% / 0.65));
-    --gradient-border: linear-gradient(135deg, hsl(158 72% 44% / 0.4), hsl(158 80% 60% / 0.05));
-    --gradient-mesh: radial-gradient(at 0% 0%, hsl(158 72% 30% / 0.35) 0px, transparent 50%), radial-gradient(at 100% 100%, hsl(190 80% 30% / 0.30) 0px, transparent 50%);
+    --gradient-hero: radial-gradient(ellipse 80% 60% at 50% 0%, hsl(247 75% 50% / 0.30), transparent 60%), radial-gradient(ellipse 60% 50% at 90% 30%, hsl(280 80% 50% / 0.18), transparent 60%), linear-gradient(180deg, hsl(240 55% 5%), hsl(240 50% 7%));
+    --gradient-emerald: linear-gradient(135deg, hsl(247 75% 60%), hsl(258 80% 68%), hsl(275 82% 72%));
+    --gradient-card: linear-gradient(180deg, hsl(240 42% 12% / 0.85), hsl(240 40% 8% / 0.65));
+    --gradient-border: linear-gradient(135deg, hsl(247 75% 60% / 0.4), hsl(280 85% 75% / 0.05));
+    --gradient-mesh: radial-gradient(at 0% 0%, hsl(247 75% 35% / 0.40) 0px, transparent 50%), radial-gradient(at 100% 100%, hsl(280 80% 35% / 0.30) 0px, transparent 50%);
 
-    --shadow-elegant: 0 20px 60px -20px hsl(222 80% 2% / 0.6);
-    --shadow-emerald: 0 12px 40px -12px hsl(158 72% 44% / 0.45);
-    --shadow-soft: 0 1px 2px hsl(222 80% 2% / 0.4), 0 8px 24px -8px hsl(222 80% 2% / 0.4);
+    --shadow-elegant: 0 20px 60px -20px hsl(240 80% 2% / 0.6);
+    --shadow-emerald: 0 12px 40px -12px hsl(247 75% 60% / 0.50);
+    --shadow-soft: 0 1px 2px hsl(240 80% 2% / 0.4), 0 8px 24px -8px hsl(240 80% 2% / 0.4);
     --shadow-glass: inset 0 1px 0 hsl(0 0% 100% / 0.06), 0 8px 32px hsl(0 0% 0% / 0.4);
 
-    --sidebar-background: 222 45% 6%;
-    --sidebar-foreground: 210 30% 90%;
-    --sidebar-primary: 158 72% 44%;
-    --sidebar-primary-foreground: 222 47% 8%;
-    --sidebar-accent: 222 32% 13%;
-    --sidebar-accent-foreground: 210 30% 96%;
-    --sidebar-border: 222 30% 14%;
-    --sidebar-ring: 158 72% 44%;
+    --sidebar-background: 240 50% 6%;
+    --sidebar-foreground: 240 25% 90%;
+    --sidebar-primary: 247 75% 65%;
+    --sidebar-primary-foreground: 240 50% 8%;
+    --sidebar-accent: 240 35% 13%;
+    --sidebar-accent-foreground: 240 25% 96%;
+    --sidebar-border: 240 32% 14%;
+    --sidebar-ring: 247 75% 65%;
   }
 }
 
@@ -210,9 +205,28 @@
   .btn-press:hover {
     transform: translateY(-1px);
   }
-  .btn-press:active {
-    transform: translateY(0) scale(0.98);
+  /* Diagonal "UPGRADE" watermark used on locked Ways-to-Earn tiles. */
+  .upgrade-watermark {
+    position: relative;
+    overflow: hidden;
   }
+  .upgrade-watermark::before {
+    content: "UPGRADE";
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-family: 'Fraunces', Georgia, serif;
+    font-weight: 700;
+    font-size: clamp(1.4rem, 4vw, 2rem);
+    letter-spacing: 0.18em;
+    color: hsl(var(--primary) / 0.18);
+    transform: rotate(-18deg);
+    pointer-events: none;
+    text-shadow: 0 1px 0 hsl(var(--background) / 0.4);
+    z-index: 1;
+  }
+  .upgrade-watermark > * { position: relative; z-index: 2; }
 }
 
 @layer utilities {

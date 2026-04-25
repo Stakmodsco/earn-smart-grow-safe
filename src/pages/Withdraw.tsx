@@ -34,7 +34,15 @@ const Withdraw = () => {
   const min = Number(settings.min_withdrawal);
   const cap = Number((settings.daily_withdrawal_caps as any)[String(profile.level)] ?? 0);
 
+  // 5-day cool-off after the user's most recent approved deposit.
+  const lockDays = Number(settings.withdrawal_lock_days ?? 5);
+  const lastDeposit = (profile as any).last_deposit_at ? new Date((profile as any).last_deposit_at) : null;
+  const unlocksAt = lastDeposit ? new Date(lastDeposit.getTime() + lockDays * 86_400_000) : null;
+  const isLocked = unlocksAt ? Date.now() < unlocksAt.getTime() : false;
+  const daysLeft = unlocksAt ? Math.max(1, Math.ceil((unlocksAt.getTime() - Date.now()) / 86_400_000)) : 0;
+
   const submit = async () => {
+    if (isLocked) return toast.error(`Withdrawals are available ${lockDays} days after your deposit. Try again in ${daysLeft} day${daysLeft === 1 ? "" : "s"}.`);
     const amt = Number(amount);
     if (!Number.isFinite(amt) || amt <= 0) return toast.error("Enter a valid amount");
     if (amt < min) return toast.error(`Minimum is $${min}`);

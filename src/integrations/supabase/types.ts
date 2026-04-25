@@ -43,6 +43,7 @@ export type Database = {
           full_name: string | null
           id: string
           last_checkin: string | null
+          last_deposit_at: string | null
           level: number
           locked_balance: number
           referral_code: string
@@ -60,6 +61,7 @@ export type Database = {
           full_name?: string | null
           id: string
           last_checkin?: string | null
+          last_deposit_at?: string | null
           level?: number
           locked_balance?: number
           referral_code: string
@@ -77,6 +79,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           last_checkin?: string | null
+          last_deposit_at?: string | null
           level?: number
           locked_balance?: number
           referral_code?: string

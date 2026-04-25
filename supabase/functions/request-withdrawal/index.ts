@@ -30,6 +30,19 @@ Deno.serve(async (req) => {
     if (amount > dailyCap) return json({ error: `daily withdrawal cap is $${dailyCap}` }, 400);
     if (amount > Number(profile.balance)) return json({ error: "insufficient balance" }, 400);
 
+    // 5-day lock after the most recent approved upgrade / deposit.
+    const lockDays = Number(await getSetting(svc, "withdrawal_lock_days") ?? 5);
+    if (profile.last_deposit_at && lockDays > 0) {
+      const unlocksAt = new Date(profile.last_deposit_at).getTime() + lockDays * 86_400_000;
+      if (Date.now() < unlocksAt) {
+        const daysLeft = Math.ceil((unlocksAt - Date.now()) / 86_400_000);
+        return json({
+          error: `Withdrawals are available ${lockDays} days after your deposit. Please try again in ${daysLeft} day${daysLeft === 1 ? "" : "s"}.`,
+          unlocks_at: new Date(unlocksAt).toISOString(),
+        }, 403);
+      }
+    }
+
     // One per 24h
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { count } = await svc.from("withdrawals").select("*", { count: "exact", head: true })
