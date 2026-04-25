@@ -17,3 +17,9 @@ verify_jwt = true
 
 [functions.admin-review-withdrawal]
 verify_jwt = true
+
+[functions.unlock-tile]
+verify_jwt = true
+
+[functions.support-bot]
+verify_jwt = false
