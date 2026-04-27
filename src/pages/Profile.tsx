@@ -1,6 +1,7 @@
 import { Navigate, useNavigate, Link } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { BottomNav } from "@/components/BottomNav";
+import { BackButton } from "@/components/BackButton";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth, useProfile, useIsAdmin } from "@/hooks/useAuth";
@@ -39,6 +40,7 @@ const Profile = () => {
     <div className="min-h-screen">
       <Navbar />
       <div className="container max-w-3xl py-10">
+        <BackButton />
         <div className="text-xs uppercase tracking-widest text-primary mb-2">Profile</div>
         <h1 className="font-display text-4xl font-semibold mb-8">Your account</h1>
 

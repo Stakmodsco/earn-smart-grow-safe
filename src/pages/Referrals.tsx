@@ -5,13 +5,16 @@ import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth, useProfile } from "@/hooks/useAuth";
+import { useCurrency } from "@/hooks/useCurrency";
 import { supabase } from "@/integrations/supabase/client";
+import { BackButton } from "@/components/BackButton";
 import { ArrowUpRight, Calendar, CheckCircle2, Copy, Link as LinkIcon, MinusCircle, Play, Sparkles, TrendingUp, Users, X } from "lucide-react";
 import { toast } from "sonner";
 
 const Referrals = () => {
   const { user, loading } = useAuth();
   const { profile } = useProfile(user?.id);
+  const { format } = useCurrency();
   const [refs, setRefs] = useState<any[]>([]);
   const [refTxns, setRefTxns] = useState<any[]>([]);
   const [cap, setCap] = useState(0);
@@ -49,6 +52,7 @@ const Referrals = () => {
     <div className="min-h-screen">
       <Navbar />
       <div className="container py-10 max-w-5xl">
+        <BackButton />
         <div className="text-xs uppercase tracking-widest text-primary mb-2">Referrals</div>
         <h1 className="font-display text-4xl font-semibold mb-6">Your network earnings</h1>
 
@@ -58,8 +62,8 @@ const Referrals = () => {
         <div className="grid md:grid-cols-4 gap-4 mb-6">
           <Stat icon={Users} label="Level 1 referrals" value={l1.length.toString()} />
           <Stat icon={Users} label="Level 2 referrals" value={l2.length.toString()} />
-          <Stat icon={TrendingUp} label="Total commission" value={`$${totalEarned.toFixed(2)}`} accent />
-          <Stat icon={Calendar} label="Daily cap remaining" value={`$${remaining.toFixed(2)} / $${cap.toFixed(2)}`} />
+          <Stat icon={TrendingUp} label="Total commission" value={format(totalEarned)} accent />
+          <Stat icon={Calendar} label="Daily cap remaining" value={`${format(remaining)} / ${format(cap)}`} />
         </div>
 
         <Card className="glass-card p-6 rounded-xl mb-6">
