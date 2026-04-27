@@ -5,13 +5,16 @@ import { BottomNav } from "@/components/BottomNav";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useCurrency } from "@/hooks/useCurrency";
 import { supabase } from "@/integrations/supabase/client";
+import { BackButton } from "@/components/BackButton";
 import { Play, Sparkles, Timer } from "lucide-react";
 
 type Row = { id: string; task_type: string; reward: number; completed_at: string };
 
 const Receipts = () => {
   const { user, loading } = useAuth();
+  const { format } = useCurrency();
   const [rows, setRows] = useState<Row[]>([]);
   const [filter, setFilter] = useState<"all" | "watch" | "spin">("all");
 
@@ -40,6 +43,7 @@ const Receipts = () => {
     <div className="min-h-screen">
       <Navbar />
       <div className="container py-10 max-w-4xl">
+        <BackButton />
         <div className="text-xs uppercase tracking-widest text-primary mb-2">Receipts</div>
         <h1 className="font-display text-4xl font-semibold mb-2">Task earnings ledger</h1>
         <p className="text-muted-foreground mb-8">Every Watch & Earn and Spin & Win completion, credited to your balance after server-side validation.</p>

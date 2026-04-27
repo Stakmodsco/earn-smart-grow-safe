@@ -89,7 +89,7 @@ const Referrals = () => {
                       </div>
                     </div>
                     <div className={`tabular-nums font-medium ${isCompleted ? "text-primary" : isCapped ? "text-warning" : "text-muted-foreground"}`}>
-                      {isCompleted ? `+ $${Number(t.amount).toFixed(2)}` : `$${Number(t.amount).toFixed(2)} ${isCapped ? "(capped)" : ""}`}
+                      {isCompleted ? `+ ${format(t.amount)}` : `${format(t.amount)} ${isCapped ? "(capped)" : ""}`}
                     </div>
                   </div>
                 );
