@@ -70,7 +70,7 @@ const CheckinHistory = () => {
             {days.slice().reverse().map((d) => (
               <div
                 key={d.key}
-                title={`${d.date.toLocaleDateString()} — ${d.claimed ? `claimed $${d.reward.toFixed(2)}` : "missed"}`}
+                title={`${d.date.toLocaleDateString()} — ${d.claimed ? `claimed ${format(d.reward)}` : "missed"}`}
                 className={`aspect-square rounded-lg border flex flex-col items-center justify-center text-xs ${
                   d.claimed
                     ? "border-primary/40 bg-primary/15 text-primary"
@@ -98,7 +98,7 @@ const CheckinHistory = () => {
                   <span>{d.date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}</span>
                 </div>
                 {d.claimed ? (
-                  <span className="text-primary tabular-nums">+ ${d.reward.toFixed(2)}</span>
+                  <span className="text-primary tabular-nums">+ {format(d.reward)}</span>
                 ) : (
                   <span className="text-xs text-muted-foreground uppercase tracking-wider">Missed</span>
                 )}
