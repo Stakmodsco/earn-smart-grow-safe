@@ -6,7 +6,9 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
+import { useCurrency } from "@/hooks/useCurrency";
 import { supabase } from "@/integrations/supabase/client";
+import { BackButton } from "@/components/BackButton";
 import { ArrowDownLeft, ArrowUpRight, Clock, FileText } from "lucide-react";
 
 const Requests = () => {
