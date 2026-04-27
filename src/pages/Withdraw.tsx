@@ -8,12 +8,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth, useProfile } from "@/hooks/useAuth";
+import { useCurrency } from "@/hooks/useCurrency";
 import { supabase } from "@/integrations/supabase/client";
+import { BackButton } from "@/components/BackButton";
 import { toast } from "sonner";
 
 const Withdraw = () => {
   const { user, loading } = useAuth();
   const { profile } = useProfile(user?.id);
+  const { format, meta } = useCurrency();
   const [settings, setSettings] = useState<any>(null);
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState("bank");
