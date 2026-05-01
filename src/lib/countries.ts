@@ -3,15 +3,14 @@
 // (smaller) catalog in `paymentMethods.ts` to suggest a sensible default
 // based on the country detected from the user's IP address.
 
+export type Scope = "ZA" | "GH" | "UG" | "BW" | "PK" | "BD" | "INT" | "COMING_SOON";
+
 export type CountryEntry = {
   code: string;       // ISO-2
   name: string;
   flag: string;       // emoji
   // Default payment "scope" the Payment page should preselect.
-  // - "ZA"  → South-Africa local methods (vouchers/cashsend)
-  // - "GH"  → Ghana mobile wallets
-  // - "INT" → International (bank / crypto / mobile money)
-  scope: "ZA" | "GH" | "INT";
+  scope: Scope;
 };
 
 // Flag generator — converts ISO-2 to regional indicator emoji.
@@ -23,7 +22,7 @@ const flag = (cc: string) =>
     .join("");
 
 // Compact ISO list (covers all UN states + most territories).
-const RAW: { code: string; name: string; scope?: "ZA" | "GH" }[] = [
+const RAW: { code: string; name: string; scope?: Scope }[] = [
   { code: "AF", name: "Afghanistan" }, { code: "AL", name: "Albania" }, { code: "DZ", name: "Algeria" },
   { code: "AS", name: "American Samoa" }, { code: "AD", name: "Andorra" }, { code: "AO", name: "Angola" },
   { code: "AI", name: "Anguilla" }, { code: "AQ", name: "Antarctica" }, { code: "AG", name: "Antigua & Barbuda" },
