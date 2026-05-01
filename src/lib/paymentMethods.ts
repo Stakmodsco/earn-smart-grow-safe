@@ -1,6 +1,9 @@
 // Payment method catalog grouped by country.
-// "International" methods reuse the legacy app_settings.payment_instructions config.
-// Country-specific methods define their own form schema, validation and helper text.
+// Each country lists explicit transfer instructions (provider, account, etc.)
+// so the user can pay manually and submit proof.
+//
+// Countries WITHOUT a specific entry will see the synthetic "COMING_SOON"
+// country (resolved by `scopeForCountry`).
 
 export type FieldDef = {
   key: string;
@@ -9,8 +12,7 @@ export type FieldDef = {
   type?: "text" | "select" | "textarea";
   options?: { value: string; label: string; disabled?: boolean; note?: string }[];
   required?: boolean;
-  // Validation
-  pattern?: string; // RegExp source
+  pattern?: string;
   patternMessage?: string;
   minLength?: number;
   maxLength?: number;
@@ -19,26 +21,35 @@ export type FieldDef = {
 export type MethodDef = {
   id: string;
   label: string;
-  // Icon name from lucide-react
   icon: "Building2" | "Bitcoin" | "Smartphone" | "Ticket" | "Send" | "Wallet";
-  // If true, render legacy instructions block from app_settings (provider, account, etc.)
   useLegacyInstructions?: boolean;
-  // Helper text shown above the form
   description?: string;
-  // Specific guidance about screenshot requirement (always required, but text varies)
   proofHint?: string;
-  // Custom form fields the user must fill (data goes into notes JSON)
   fields?: FieldDef[];
+  // Inline structured instructions rendered as labelled rows (with copy buttons)
+  instructions?: {
+    provider?: string;
+    account_name?: string;
+    account_number?: string;
+    network?: string;
+    address?: string;
+    notes?: string;
+    steps?: string[];
+  };
 };
 
 export type CountryDef = {
   id: string;
   label: string;
   flag: string;
+  comingSoon?: boolean;
   methods: MethodDef[];
 };
 
+const COMMON_PROOF = "Upload a clear screenshot of your payment receipt showing the date, amount and reference.";
+
 export const COUNTRIES: CountryDef[] = [
+  // ─── International / fallback (uses settings.payment_instructions) ────────
   {
     id: "INT",
     label: "International",
@@ -49,158 +60,190 @@ export const COUNTRIES: CountryDef[] = [
         label: "Bank Transfer",
         icon: "Building2",
         useLegacyInstructions: true,
-        proofHint: "Upload a screenshot of the completed bank transfer showing the date, amount and reference.",
+        proofHint: "Upload a screenshot of the completed bank transfer.",
       },
       {
         id: "crypto",
-        label: "Crypto (USDT)",
+        label: "Crypto (USDT TRC20)",
         icon: "Bitcoin",
         useLegacyInstructions: true,
-        proofHint: "Upload a screenshot of the on-chain transaction (TXID, amount and destination address visible).",
-      },
-      {
-        id: "mobile_money",
-        label: "Mobile Money",
-        icon: "Smartphone",
-        useLegacyInstructions: true,
-        proofHint: "Upload the SMS confirmation or app receipt showing the transaction ID and amount.",
+        proofHint: "Upload a screenshot of the on-chain transaction (TXID and amount visible).",
       },
     ],
   },
+
+  // ─── South Africa (vouchers + cash send) ──────────────────────────────────
   {
     id: "ZA",
     label: "South Africa",
     flag: "🇿🇦",
     methods: [
       {
-        id: "za_voucher",
-        label: "Voucher",
-        icon: "Ticket",
-        description:
-          "Buy a voucher at any retailer, then enter the pin below. Funds are credited only once an admin verifies the pin matches the voucher type and amount.",
-        proofHint:
-          "Upload a clear photo or scan of the voucher slip showing the pin, serial and store stamp. This is required so admins can match it against the pin you submitted.",
+        id: "za_voucher", label: "Voucher (OTT/1Voucher/Blu)", icon: "Ticket",
+        description: "Buy a voucher at any retailer, then enter the pin below. Funds are credited only after admin verifies the pin.",
+        proofHint: "Upload a clear photo of the voucher slip showing the pin and store stamp.",
         fields: [
-          {
-            key: "voucher_type",
-            label: "Voucher type",
-            type: "select",
-            required: true,
+          { key: "voucher_type", label: "Voucher type", type: "select", required: true,
             options: [
               { value: "OTT", label: "OTT Voucher" },
               { value: "1VOUCHER", label: "1Voucher" },
               { value: "BLU", label: "Blu Voucher" },
-              { value: "EASYLOAD", label: "EasyLoad Voucher" },
-              { value: "ANYTIME", label: "Anytime Voucher" },
-            ],
-          },
-          {
-            key: "pin",
-            label: "Voucher PIN",
-            placeholder: "12 to 19 digits",
-            required: true,
-            pattern: "^\\d{12,19}$",
-            patternMessage: "Voucher PIN must be 12–19 digits with no spaces.",
-            minLength: 12,
-            maxLength: 19,
-          },
-          {
-            key: "serial",
-            label: "Serial number (optional)",
-            placeholder: "If printed on the slip",
-            pattern: "^[A-Za-z0-9-]{4,32}$",
-            patternMessage: "Serial may only contain letters, numbers and dashes (4–32 chars).",
-            maxLength: 32,
-          },
-        ],
-      },
-      {
-        id: "za_cashsend",
-        label: "CashSend",
-        icon: "Send",
-        description: "Send via your bank's CashSend / Send-iMali / CashPay service, then enter the reference and pin.",
-        proofHint:
-          "Upload a screenshot of the CashSend confirmation from your banking app showing the reference and amount.",
-        fields: [
-          {
-            key: "bank",
-            label: "Sending bank",
-            type: "select",
-            required: true,
-            options: [
-              { value: "CAPITEC", label: "Capitec" },
-              { value: "NEDBANK", label: "Nedbank" },
-              { value: "STANDARD", label: "Standard Bank" },
-              { value: "ABSA", label: "Absa Bank" },
-            ],
-          },
-          {
-            key: "reference",
-            label: "CashSend reference",
-            placeholder: "10–14 digit reference",
-            required: true,
-            pattern: "^\\d{8,16}$",
-            patternMessage: "Reference must be 8–16 digits.",
-            minLength: 8,
-            maxLength: 16,
-          },
-          {
-            key: "pin",
-            label: "CashSend PIN",
-            placeholder: "4–8 digit withdrawal pin",
-            required: true,
-            pattern: "^\\d{4,8}$",
-            patternMessage: "CashSend PIN must be 4–8 digits.",
-            minLength: 4,
-            maxLength: 8,
-          },
+            ] },
+          { key: "pin", label: "Voucher PIN", required: true, pattern: "^\\d{12,19}$", patternMessage: "12–19 digits, no spaces.", minLength: 12, maxLength: 19 },
         ],
       },
     ],
   },
+
+  // ─── Ghana (Vodafone Cash via MTN-to-Vodafone *170#) ──────────────────────
   {
     id: "GH",
     label: "Ghana",
     flag: "🇬🇭",
     methods: [
       {
-        id: "gh_mobile_wallet",
-        label: "Mobile Wallet",
-        icon: "Wallet",
-        description: "Send from your mobile wallet, then enter the transaction ID exactly as it appears on the SMS.",
-        proofHint:
-          "Upload a screenshot of the SMS receipt or wallet app showing the transaction ID, amount and recipient.",
+        id: "gh_vodafone_cash", label: "Vodafone Cash (via MTN *170#)", icon: "Smartphone",
+        description: "Send from MTN to Vodafone using *170# → Option 1 (Transfer Money) → Option 5 (Other Network) → Option 2 (Vodafone).",
+        proofHint: "Upload the SMS confirmation showing the transaction ID and amount.",
+        instructions: {
+          provider: "Vodafone Cash",
+          account_name: "Mohammed Sadiq Hamis",
+          account_number: "0505706531",
+          steps: [
+            "Dial *170# on MTN",
+            "Choose Option 1 — Transfer Money",
+            "Choose Option 5 — Other Network",
+            "Choose Option 2 — Vodafone",
+            "Enter recipient: 0505706531",
+            "Enter amount and confirm",
+          ],
+          notes: "Then submit the screenshot below.",
+        },
         fields: [
-          {
-            key: "wallet",
-            label: "Wallet provider",
-            type: "select",
-            required: true,
-            options: [
-              { value: "VODAFONE", label: "Vodafone Cash" },
-              { value: "MTN", label: "MTN MoMo — On maintenance", disabled: true, note: "Temporarily unavailable" },
-            ],
-          },
-          {
-            key: "sender_number",
-            label: "Sender phone number",
-            placeholder: "+233XXXXXXXXX",
-            required: true,
-            pattern: "^\\+?233\\d{9}$",
-            patternMessage: "Use a valid Ghana number, e.g. +233241234567.",
-            maxLength: 14,
-          },
-          {
-            key: "transaction_id",
-            label: "Transaction ID",
-            placeholder: "From your SMS receipt",
-            required: true,
-            pattern: "^[A-Za-z0-9.]{8,32}$",
-            patternMessage: "Transaction ID must be 8–32 letters/digits.",
-            minLength: 8,
-            maxLength: 32,
-          },
+          { key: "transaction_id", label: "Transaction ID", placeholder: "From your SMS receipt", required: true,
+            pattern: "^[A-Za-z0-9.]{6,32}$", patternMessage: "6–32 letters/digits.", minLength: 6, maxLength: 32 },
+          { key: "sender_number", label: "Your MTN number", placeholder: "+233XXXXXXXXX", required: true,
+            pattern: "^\\+?233\\d{9}$", patternMessage: "Use a valid Ghana number, e.g. +233241234567.", maxLength: 14 },
         ],
+      },
+    ],
+  },
+
+  // ─── Uganda (Airtel Money / International Money Transfer) ─────────────────
+  {
+    id: "UG",
+    label: "Uganda",
+    flag: "🇺🇬",
+    methods: [
+      {
+        id: "ug_airtel_money", label: "Orange Money / Airtel Money (*145#)", icon: "Smartphone",
+        description: "Use *145# → Option 4 (International Money Transfer) → choose UGANDA AIRTEL.",
+        proofHint: "Upload the SMS or app confirmation with transaction ID.",
+        instructions: {
+          provider: "UGANDA AIRTEL",
+          account_name: "FLORENCE NYABURU",
+          account_number: "+256759225960",
+          steps: [
+            "Dial *145#",
+            "Enter your secret code",
+            "Choose Option 4 — International Money Transfer",
+            "Choose country: UGANDA AIRTEL",
+            "Recipient number: +256759225960",
+            "Enter the amount shown above",
+          ],
+        },
+        fields: [
+          { key: "transaction_id", label: "Transaction ID", placeholder: "From SMS receipt", required: true,
+            pattern: "^[A-Za-z0-9.]{6,32}$", patternMessage: "6–32 letters/digits.", minLength: 6, maxLength: 32 },
+        ],
+      },
+    ],
+  },
+
+  // ─── Botswana (Jazz Cash bank transfer) ───────────────────────────────────
+  {
+    id: "BW",
+    label: "Botswana",
+    flag: "🇧🇼",
+    methods: [
+      {
+        id: "bw_jazz_cash", label: "Jazz Cash Bank Transfer", icon: "Building2",
+        description: "Send via Jazz Cash to the account below.",
+        proofHint: COMMON_PROOF,
+        instructions: {
+          provider: "Jazz Cash",
+          account_name: "Anas Javed",
+          account_number: "03706886185",
+        },
+        fields: [
+          { key: "transaction_id", label: "Transaction ID / reference", required: true,
+            pattern: "^[A-Za-z0-9.\\-]{6,40}$", patternMessage: "6–40 letters/digits.", minLength: 6, maxLength: 40 },
+        ],
+      },
+    ],
+  },
+
+  // ─── Pakistan (Jazz Cash) ─────────────────────────────────────────────────
+  {
+    id: "PK",
+    label: "Pakistan",
+    flag: "🇵🇰",
+    methods: [
+      {
+        id: "pk_jazz_cash", label: "Jazz Cash", icon: "Wallet",
+        description: "Send via Jazz Cash to the wallet below.",
+        proofHint: COMMON_PROOF,
+        instructions: {
+          provider: "Jazz Cash",
+          account_name: "Anas Javed",
+          account_number: "03706886185",
+        },
+        fields: [
+          { key: "transaction_id", label: "Transaction ID", required: true,
+            pattern: "^[A-Za-z0-9.\\-]{6,40}$", patternMessage: "6–40 letters/digits.", minLength: 6, maxLength: 40 },
+        ],
+      },
+    ],
+  },
+
+  // ─── Bangladesh (bKash, Send Money only) ──────────────────────────────────
+  {
+    id: "BD",
+    label: "Bangladesh",
+    flag: "🇧🇩",
+    methods: [
+      {
+        id: "bd_bkash", label: "bKash (Send Money)", icon: "Smartphone",
+        description: "Send via bKash — SEND MONEY ONLY (do not use Payment). Minimum 1000 Taka.",
+        proofHint: "Upload the bKash app screenshot showing the Trx ID.",
+        instructions: {
+          provider: "bKash",
+          account_number: "01768508100",
+          notes: "1000 Taka and above. SEND MONEY ONLY.",
+        },
+        fields: [
+          { key: "transaction_id", label: "bKash Trx ID", placeholder: "e.g. 9A1B2C3D4E", required: true,
+            pattern: "^[A-Z0-9]{8,12}$", patternMessage: "Trx ID is 8–12 uppercase letters/digits.", minLength: 8, maxLength: 12 },
+          { key: "sender_number", label: "Your bKash number", placeholder: "01XXXXXXXXX", required: true,
+            pattern: "^01\\d{9}$", patternMessage: "Must be 11 digits starting with 01.", minLength: 11, maxLength: 11 },
+        ],
+      },
+    ],
+  },
+
+  // ─── Coming-soon fallback for every other country ─────────────────────────
+  {
+    id: "COMING_SOON",
+    label: "Coming soon",
+    flag: "🚧",
+    comingSoon: true,
+    methods: [
+      {
+        id: "coming_soon",
+        label: "Local payments coming soon",
+        icon: "Building2",
+        description:
+          "We don't have a local payment partner in your country yet. Please choose International (Crypto) above, or contact support to be notified when local methods launch in your region.",
       },
     ],
   },
@@ -217,10 +260,8 @@ export const findMethod = (methodId: string) => {
   return null;
 };
 
-// All known method IDs — used for server-side allow-list / client guard.
 export const ALL_METHOD_IDS: string[] = COUNTRIES.flatMap((c) => c.methods.map((m) => m.id));
 
-// Returns the country a given method belongs to, or null if unknown.
 export const countryForMethod = (methodId: string): string | null => {
   for (const c of COUNTRIES) {
     if (c.methods.some((m) => m.id === methodId)) return c.id;
