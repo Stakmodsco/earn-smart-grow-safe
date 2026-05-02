@@ -52,3 +52,15 @@ export function passwordError(pw: string): string | null {
   if (pw.length > 72) return "Password must be 72 characters or fewer.";
   return null;
 }
+
+export function generateStrongPassword(): string {
+  const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  const lower = "abcdefghijkmnopqrstuvwxyz";
+  const digits = "23456789";
+  const symbols = "!@#$%^&*";
+  const all = `${upper}${lower}${digits}${symbols}`;
+  const pick = (chars: string) => chars[Math.floor(Math.random() * chars.length)];
+  const chars = [pick(upper), pick(lower), pick(digits), pick(symbols)];
+  while (chars.length < 16) chars.push(pick(all));
+  return chars.sort(() => Math.random() - 0.5).join("");
+}
