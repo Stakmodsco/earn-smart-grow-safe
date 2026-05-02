@@ -217,18 +217,21 @@ const Activities = () => {
               </div>
             </div>
             {nextTask ? (
-              <div className="flex items-center gap-4 p-3 rounded-lg border border-border bg-secondary/40">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-3 rounded-lg border border-border bg-secondary/40">
                 <div className="h-10 w-10 rounded-lg bg-primary/15 border border-primary/20 grid place-items-center">
                   <Sparkles className="h-5 w-5 text-primary" />
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <div className="font-medium text-sm">{nextTask.title}</div>
                   {nextTask.description && <div className="text-xs text-muted-foreground">{nextTask.description}</div>}
                 </div>
-                <div className="text-right">
+                <div className="text-left sm:text-right">
                   <div className="text-primary font-semibold tabular-nums text-sm">+ {format(nextTask.reward)}</div>
                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{nextTask.task_type}</div>
                 </div>
+                <Button size="sm" variant="hero" disabled={busy !== null} onClick={() => invokeFn("complete-task", { catalog_id: nextTask.id })}>
+                  Complete
+                </Button>
               </div>
             ) : profile.level < 2 ? (
               <button
