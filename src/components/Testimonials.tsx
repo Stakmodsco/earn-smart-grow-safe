@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Quote, Star } from "lucide-react";
 import { useMemo } from "react";
+import { useCurrency } from "@/hooks/useCurrency";
 
 type T = { name: string; role: string; quote: string };
 
@@ -24,8 +25,13 @@ const TESTIMONIALS: T[] = [
 ];
 
 export const Testimonials = () => {
+  const { format } = useCurrency();
+  const localized = TESTIMONIALS.map((t) => ({
+    ...t,
+    quote: t.quote.replace("$120", format(120, { decimals: 0 })),
+  }));
   // Duplicate for seamless marquee
-  const loop = useMemo(() => [...TESTIMONIALS, ...TESTIMONIALS], []);
+  const loop = useMemo(() => [...localized, ...localized], [localized]);
   return (
     <section className="container py-20 max-w-6xl">
       <div className="text-center mb-10">
