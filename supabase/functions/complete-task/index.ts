@@ -9,13 +9,43 @@ Deno.serve(async (req) => {
     if (!user) return json({ error: "unauthorized" }, 401);
 
     const body = await req.json().catch(() => ({}));
+    const catalogId = String(body.catalog_id || "").trim();
     const taskType = String(body.task_type || "");
-    if (!VALID.has(taskType)) return json({ error: "invalid task" }, 400);
+    if (!catalogId && !VALID.has(taskType)) return json({ error: "invalid task" }, 400);
 
     const svc = getServiceClient();
     const { data: profile } = await svc.from("profiles").select("*").eq("id", user.id).maybeSingle();
     if (!profile) return json({ error: "profile not found" }, 404);
     if (profile.flagged) return json({ error: "account flagged" }, 403);
+    if (catalogId) {
+      const { data: task } = await svc.from("task_catalog").select("*").eq("id", catalogId).eq("active", true).maybeSingle();
+      if (!task) return json({ error: "task not found" }, 404);
+      if ((profile.level ?? 0) < Number(task.min_level ?? 1)) return json({ error: "upgrade required" }, 403);
+
+      const { data: done } = await svc.from("task_completions").select("id").eq("user_id", user.id).eq("catalog_id", catalogId).maybeSingle();
+      if (done) return json({ error: "task already completed" }, 409);
+
+      const caps = (await getSetting(svc, "daily_earning_caps")) as Record<string, number>;
+      const today = todayUTC();
+      const sameDay = profile.daily_earned_date === today;
+      const dailyEarned = sameDay ? Number(profile.daily_earned ?? 0) : 0;
+      const allowed = Math.max(0, Number(caps[String(profile.level ?? 0)] ?? 0) - dailyEarned);
+      const credit = Math.min(Number(task.reward ?? 0), allowed);
+      if (credit <= 0) return json({ error: "daily earning cap reached" }, 429);
+
+      const newBalance = Number(profile.balance) + credit;
+      await svc.from("profiles").update({
+        balance: newBalance,
+        total_earnings: Number(profile.total_earnings) + credit,
+        daily_earned: dailyEarned + credit,
+        daily_earned_date: today,
+        updated_at: new Date().toISOString(),
+      }).eq("id", user.id);
+      await svc.from("task_completions").insert({ user_id: user.id, catalog_id: catalogId, reward: credit });
+      await svc.from("transactions").insert({ user_id: user.id, type: "reward", amount: credit, status: "completed", notes: `catalog:${task.title}` });
+      return json({ ok: true, reward: credit, balance: newBalance });
+    }
+
     if ((profile.level ?? 0) < 1) return json({ error: "upgrade required" }, 403);
 
     const taskRewards = (await getSetting(svc, "task_rewards")) as Record<string, Record<string, number>>;
