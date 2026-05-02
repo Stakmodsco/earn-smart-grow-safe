@@ -73,6 +73,7 @@ const Payment = () => {
   const [file, setFile] = useState<File | null>(null);
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [pendingUpgrade, setPendingUpgrade] = useState<any | null>(null);
   const [countryOpen, setCountryOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -81,6 +82,18 @@ const Payment = () => {
       const m: any = {}; data?.forEach((r: any) => (m[r.key] = r.value)); setSettings(m);
     });
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("transactions")
+      .select("id,target_level,created_at")
+      .eq("user_id", user.id)
+      .eq("type", "upgrade")
+      .eq("status", "pending")
+      .maybeSingle()
+      .then(({ data }) => setPendingUpgrade(data ?? null));
+  }, [user]);
 
   // Auto-fill the residence selector from IP geolocation on first load.
   useEffect(() => {
@@ -137,10 +150,6 @@ const Payment = () => {
 
   const prices = settings.level_prices as Record<string, number>;
   const usd = Number(prices?.[String(targetLevel)] ?? 0);
-  const fxRates = (settings.fx_rates ?? { NGN: 1481.47, GHS: 15, ZAR: 18.5 }) as Record<string, number>;
-  const localAmounts = Object.entries(fxRates).map(([code, rate]) => ({
-    code, value: usd * Number(rate),
-  }));
 
   const planName = ({ 1: "Silver", 2: "Gold", 3: "Platinum" } as any)[targetLevel];
   const instructions = (settings.payment_instructions ?? {}) as Record<string, Instructions>;
@@ -161,6 +170,12 @@ const Payment = () => {
   };
 
   const submit = async () => {
+    if (pendingUpgrade) {
+      return toast.error("You already have a pending upgrade request. Please wait for admin review before submitting another.");
+    }
+    if (activeCountry.comingSoon || activeMethod.id === "coming_soon") {
+      return toast.error("Local payments are not configured for your country yet. Use the International fallback option.");
+    }
     // 1. Country/method lock — guarantee the chosen method belongs to the chosen country.
     const belongsToCountry = activeCountry.methods.some((m) => m.id === activeMethod.id);
     if (!belongsToCountry) {
@@ -228,8 +243,8 @@ const Payment = () => {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast.success("Payment submitted — admin will review shortly");
-      navigate("/requests");
+      toast.success("Payment submitted — your upgrade is pending review");
+      navigate("/upgrade");
     } catch (e: any) {
       toast.error(e.message ?? "Failed");
     } finally {
