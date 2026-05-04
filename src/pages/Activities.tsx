@@ -123,15 +123,20 @@ const Activities = () => {
   const isPremiumUnlocked = (id: string) => unlocks.has(id) || tierFree.includes(id);
 
   const invokeFn = async (fn: string, body: any = {}) => {
-    setBusy(fn + JSON.stringify(body));
+    const key = fn + JSON.stringify(body);
+    setBusy(key);
     try {
       const { data, error } = await supabase.functions.invoke(fn, { body });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast.success(data?.reward ? `+ ${format(data.reward)} earned` : "Done");
+      // Optimistically mark catalog task as completed so the button updates immediately.
+      if (body?.catalog_id) {
+        setCompletions((prev) => new Set(prev).add(body.catalog_id));
+      }
+      toast.success(data?.reward ? `+ ${format(data.reward)} earned` : "Task completed");
       await Promise.all([refresh(), loadCounts()]);
     } catch (e: any) {
-      toast.error(e.message ?? "Failed");
+      toast.error(e?.message ?? "Task failed — please try again");
     } finally {
       setBusy(null);
     }
@@ -229,9 +234,20 @@ const Activities = () => {
                   <div className="text-primary font-semibold tabular-nums text-sm">+ {format(nextTask.reward)}</div>
                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{nextTask.task_type}</div>
                 </div>
-                <Button size="sm" variant="hero" disabled={busy !== null} onClick={() => invokeFn("complete-task", { catalog_id: nextTask.id })}>
-                  Complete
-                </Button>
+                {(() => {
+                  const taskBusyKey = "complete-task" + JSON.stringify({ catalog_id: nextTask.id });
+                  const isBusy = busy === taskBusyKey;
+                  return (
+                    <Button
+                      size="sm"
+                      variant="hero"
+                      disabled={busy !== null}
+                      onClick={() => invokeFn("complete-task", { catalog_id: nextTask.id })}
+                    >
+                      {isBusy ? "Completing…" : "Complete"}
+                    </Button>
+                  );
+                })()}
               </div>
             ) : profile.level < 2 ? (
               <button
