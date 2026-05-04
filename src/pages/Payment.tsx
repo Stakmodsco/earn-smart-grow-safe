@@ -15,10 +15,11 @@ import { useGeoCountry } from "@/hooks/useGeoCountry";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Bitcoin, Building2, Copy, Smartphone, Upload, ArrowLeft, Ticket, Send, Wallet, ShieldCheck, AlertCircle, Search } from "lucide-react";
-import { COUNTRIES, type MethodDef, type FieldDef } from "@/lib/paymentMethods";
+import { COUNTRIES, USDT_TRC20_METHOD_ID, type MethodDef, type FieldDef } from "@/lib/paymentMethods";
 import { ALL_COUNTRIES, scopeForCountry } from "@/lib/countries";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import usdtQrImage from "@/assets/usdt-trc20-qr.jpg";
 
 type StructuredInstr = {
   amount_label?: string;
@@ -315,6 +316,12 @@ const Payment = () => {
         {/* Inline structured instructions */}
         {m.instructions && (
           <div className="rounded-lg border border-border bg-secondary/40 p-4 space-y-2">
+            {m.id === USDT_TRC20_METHOD_ID && (
+              <div className="flex flex-col items-center gap-2 pb-3 border-b border-border">
+                <img src={usdtQrImage} alt="USDT TRC20 wallet QR code" className="w-44 h-44 rounded-md bg-white p-2" />
+                <p className="text-[11px] text-muted-foreground">Scan with your wallet — USDT TRC20 only</p>
+              </div>
+            )}
             {m.instructions.provider && <DetailRow label="Provider" value={m.instructions.provider} />}
             {m.instructions.network && <DetailRow label="Network" value={m.instructions.network} />}
             {m.instructions.account_name && <DetailRow label="Recipient name" value={m.instructions.account_name} onCopy={() => copy(m.instructions!.account_name!)} />}
