@@ -38,7 +38,7 @@ const Index = () => {
       <ActivityCarousel />
       <div className="border-b border-primary/20 bg-primary/10">
         <div className="container py-3 text-sm text-center font-medium">
-          New members get a signup bonus of around {format(20)} credited to their locked balance after creating an account.
+          New members get a signup bonus of $20 credited to their locked balance after creating an account.
         </div>
       </div>
 
