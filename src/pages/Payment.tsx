@@ -15,10 +15,11 @@ import { useGeoCountry } from "@/hooks/useGeoCountry";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Bitcoin, Building2, Copy, Smartphone, Upload, ArrowLeft, Ticket, Send, Wallet, ShieldCheck, AlertCircle, Search } from "lucide-react";
-import { COUNTRIES, type MethodDef, type FieldDef } from "@/lib/paymentMethods";
+import { COUNTRIES, USDT_TRC20_METHOD_ID, type MethodDef, type FieldDef } from "@/lib/paymentMethods";
 import { ALL_COUNTRIES, scopeForCountry } from "@/lib/countries";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import usdtQrImage from "@/assets/usdt-trc20-qr.jpg";
 
 type StructuredInstr = {
   amount_label?: string;
