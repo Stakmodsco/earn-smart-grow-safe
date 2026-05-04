@@ -23,6 +23,7 @@ import Payment from "./pages/Payment.tsx";
 import DailyCheckin from "./pages/DailyCheckin.tsx";
 import { SupportBot } from "@/components/SupportBot";
 import { IdleLogoutGuard } from "@/components/IdleLogoutGuard";
+import { AuthNudgeModal } from "@/components/AuthNudgeModal";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,7 @@ const App = () => (
       <BrowserRouter>
         <IdleLogoutGuard />
         <UpgradeNagModal />
+        <AuthNudgeModal />
         <SupportBot />
         <Routes>
           <Route path="/" element={<Index />} />
