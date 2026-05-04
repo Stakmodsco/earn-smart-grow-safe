@@ -234,9 +234,20 @@ const Activities = () => {
                   <div className="text-primary font-semibold tabular-nums text-sm">+ {format(nextTask.reward)}</div>
                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{nextTask.task_type}</div>
                 </div>
-                <Button size="sm" variant="hero" disabled={busy !== null} onClick={() => invokeFn("complete-task", { catalog_id: nextTask.id })}>
-                  Complete
-                </Button>
+                {(() => {
+                  const taskBusyKey = "complete-task" + JSON.stringify({ catalog_id: nextTask.id });
+                  const isBusy = busy === taskBusyKey;
+                  return (
+                    <Button
+                      size="sm"
+                      variant="hero"
+                      disabled={busy !== null}
+                      onClick={() => invokeFn("complete-task", { catalog_id: nextTask.id })}
+                    >
+                      {isBusy ? "Completing…" : "Complete"}
+                    </Button>
+                  );
+                })()}
               </div>
             ) : profile.level < 2 ? (
               <button
