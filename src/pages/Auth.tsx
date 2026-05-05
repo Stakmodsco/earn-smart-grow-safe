@@ -73,7 +73,8 @@ const Auth = () => {
           },
         });
         if (error) throw error;
-        // Account created — flip to sign-in mode and prompt the user to log in.
+        // Force a fresh sign-in so the user lands on the login screen as requested.
+        await supabase.auth.signOut();
         setPostSignupEmail(form.email.trim().toLowerCase());
         setMode("signin");
         setForm((f) => ({ ...f, password: "" }));
