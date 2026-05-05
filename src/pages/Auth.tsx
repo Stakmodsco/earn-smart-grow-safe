@@ -12,12 +12,20 @@ import { toast } from "sonner";
 import { CheckCircle2, Circle, ShieldCheck } from "lucide-react";
 import { checkPassword, generateStrongPassword, passwordError, validateEmail, EMAIL_HINT } from "@/lib/passwordRules";
 
+const makeCaptcha = () => {
+  const a = Math.floor(Math.random() * 9) + 1;
+  const b = Math.floor(Math.random() * 9) + 1;
+  return { a, b, answer: a + b };
+};
+
 const Auth = () => {
   const [params] = useSearchParams();
   const initialMode = params.get("mode") === "signup" ? "signup" : "signin";
   const [mode, setMode] = useState<"signin" | "signup">(initialMode);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ email: "", password: "", full_name: "", referral_code: params.get("ref") ?? "" });
+  const [captcha, setCaptcha] = useState(makeCaptcha());
+  const [captchaInput, setCaptchaInput] = useState("");
   // After a successful signup we want to switch the form into "signin" mode
   // and surface a clear "check your email" notice. We track that locally.
   const [postSignupEmail, setPostSignupEmail] = useState<string | null>(null);
@@ -49,21 +57,30 @@ const Auth = () => {
         const pwErr = passwordError(form.password);
         if (pwErr) { toast.error(pwErr); setLoading(false); return; }
         if (!form.full_name.trim()) { toast.error("Enter your full name"); setLoading(false); return; }
+        if (Number(captchaInput) !== captcha.answer) {
+          toast.error("Captcha is incorrect — please try again.");
+          setCaptcha(makeCaptcha());
+          setCaptchaInput("");
+          setLoading(false);
+          return;
+        }
 
         const { error } = await supabase.auth.signUp({
           email: form.email.trim().toLowerCase(),
           password: form.password,
           options: {
-            emailRedirectTo: `${window.location.origin}/dashboard`,
             data: { full_name: form.full_name.trim(), referral_code: form.referral_code || null },
           },
         });
         if (error) throw error;
-        // Show "check your email" state and flip to sign-in mode.
+        // Force a fresh sign-in so the user lands on the login screen as requested.
+        await supabase.auth.signOut();
         setPostSignupEmail(form.email.trim().toLowerCase());
         setMode("signin");
         setForm((f) => ({ ...f, password: "" }));
-        toast.success("Account created — check your email to confirm, then sign in.");
+        setCaptcha(makeCaptcha());
+        setCaptchaInput("");
+        toast.success("Account created — please sign in to continue.");
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email: form.email.trim().toLowerCase(),
@@ -96,10 +113,9 @@ const Auth = () => {
             <div className="mb-5 rounded-lg border border-primary/30 bg-primary/10 p-4 text-sm flex gap-3">
               <ShieldCheck className="h-5 w-5 text-primary shrink-0 mt-0.5" />
               <div>
-                <div className="font-medium">Confirm your email</div>
+                <div className="font-medium">Account created 🎉</div>
                 <div className="text-muted-foreground mt-1">
-                  We sent a confirmation link to <span className="font-medium text-foreground">{postSignupEmail}</span>.
-                  Click it, then come back here to sign in.
+                  Sign in below with <span className="font-medium text-foreground">{postSignupEmail}</span> to access your dashboard.
                 </div>
               </div>
             </div>
@@ -148,6 +164,24 @@ const Auth = () => {
             {mode === "signup" && (
               <Field label="Referral code (optional)">
                 <Input value={form.referral_code} onChange={(e) => setForm({ ...form, referral_code: e.target.value.toUpperCase() })} placeholder="ABCD1234" maxLength={20} />
+              </Field>
+            )}
+            {mode === "signup" && (
+              <Field label={`Captcha — what is ${captcha.a} + ${captcha.b}?`}>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    value={captchaInput}
+                    onChange={(e) => setCaptchaInput(e.target.value)}
+                    placeholder="Type the answer"
+                    required
+                  />
+                  <Button type="button" variant="outline" size="sm" onClick={() => { setCaptcha(makeCaptcha()); setCaptchaInput(""); }}>
+                    New
+                  </Button>
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1">Quick check to confirm you're human — no email verification needed.</p>
               </Field>
             )}
             <Button type="submit" variant="hero" size="lg" className="w-full" disabled={loading}>

@@ -78,11 +78,28 @@ const Payment = () => {
   const [countryOpen, setCountryOpen] = useState(false);
   const navigate = useNavigate();
 
+  // Hydrate from localStorage cache first to avoid blocking on the network.
   useEffect(() => {
+    try {
+      const cached = localStorage.getItem("monetra:app_settings");
+      if (cached) setSettings(JSON.parse(cached));
+    } catch { /* ignore */ }
     supabase.from("app_settings").select("*").then(({ data }) => {
-      const m: any = {}; data?.forEach((r: any) => (m[r.key] = r.value)); setSettings(m);
+      const m: any = {}; data?.forEach((r: any) => (m[r.key] = r.value));
+      setSettings(m);
+      try { localStorage.setItem("monetra:app_settings", JSON.stringify(m)); } catch { /* ignore */ }
     });
   }, []);
+
+  // Cache the resolved payment-method list per country so revisits are instant.
+  useEffect(() => {
+    if (!country) return;
+    try {
+      const key = `monetra:methods:${country}`;
+      const list = COUNTRIES.find((c) => c.id === country)?.methods.map((m) => ({ id: m.id, label: m.label })) ?? [];
+      localStorage.setItem(key, JSON.stringify(list));
+    } catch { /* ignore */ }
+  }, [country]);
 
   useEffect(() => {
     if (!user) return;
@@ -492,9 +509,12 @@ const Payment = () => {
             return (
               <AccordionItem key={m.id} value={m.id} className="glass-card rounded-xl border-0 px-4">
                 <AccordionTrigger className="hover:no-underline py-4">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-1">
                     <Icon className="h-5 w-5 text-primary" />
                     <span className="font-medium">{m.label}</span>
+                    <span className="ml-auto mr-2 text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 tabular-nums">
+                      {format(usd, { decimals: 0 })} · {meta.code}
+                    </span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="pb-5">
