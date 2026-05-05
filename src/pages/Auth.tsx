@@ -12,11 +12,13 @@ import { toast } from "sonner";
 import { CheckCircle2, Circle, ShieldCheck } from "lucide-react";
 import { checkPassword, generateStrongPassword, passwordError, validateEmail, EMAIL_HINT } from "@/lib/passwordRules";
 
-const makeCaptcha = () => {
-  const a = Math.floor(Math.random() * 9) + 1;
-  const b = Math.floor(Math.random() * 9) + 1;
-  return { a, b, answer: a + b };
-};
+type Captcha = { id: string; a: number; b: number };
+
+async function fetchCaptcha(): Promise<Captcha> {
+  const { data, error } = await supabase.functions.invoke("captcha-challenge", { method: "POST" });
+  if (error) throw error;
+  return data as Captcha;
+}
 
 const Auth = () => {
   const [params] = useSearchParams();
@@ -24,8 +26,9 @@ const Auth = () => {
   const [mode, setMode] = useState<"signin" | "signup">(initialMode);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ email: "", password: "", full_name: "", referral_code: params.get("ref") ?? "" });
-  const [captcha, setCaptcha] = useState(makeCaptcha());
+  const [captcha, setCaptcha] = useState<Captcha | null>(null);
   const [captchaInput, setCaptchaInput] = useState("");
+  const [captchaLoading, setCaptchaLoading] = useState(false);
   // After a successful signup we want to switch the form into "signin" mode
   // and surface a clear "check your email" notice. We track that locally.
   const [postSignupEmail, setPostSignupEmail] = useState<string | null>(null);
