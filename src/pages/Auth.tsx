@@ -37,6 +37,25 @@ const Auth = () => {
 
   useEffect(() => { if (user) navigate("/dashboard"); }, [user, navigate]);
 
+  const refreshCaptcha = async () => {
+    setCaptchaLoading(true);
+    setCaptchaInput("");
+    try {
+      setCaptcha(await fetchCaptcha());
+    } catch {
+      toast.error("Could not load captcha. Please try again.");
+      setCaptcha(null);
+    } finally {
+      setCaptchaLoading(false);
+    }
+  };
+
+  // Load a captcha when entering signup mode.
+  useEffect(() => {
+    if (mode === "signup" && !captcha) refreshCaptcha();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode]);
+
   const passwordChecks = checkPassword(form.password);
   const suggestStrongPassword = () => {
     const password = generateStrongPassword();
@@ -60,28 +79,33 @@ const Auth = () => {
         const pwErr = passwordError(form.password);
         if (pwErr) { toast.error(pwErr); setLoading(false); return; }
         if (!form.full_name.trim()) { toast.error("Enter your full name"); setLoading(false); return; }
-        if (Number(captchaInput) !== captcha.answer) {
-          toast.error("Captcha is incorrect — please try again.");
-          setCaptcha(makeCaptcha());
-          setCaptchaInput("");
+        if (!captcha) { toast.error("Captcha not loaded. Please refresh."); setLoading(false); return; }
+        const answerNum = Number(captchaInput);
+        if (!Number.isFinite(answerNum)) {
+          toast.error("Enter the captcha answer."); setLoading(false); return;
+        }
+
+        const { data, error } = await supabase.functions.invoke("signup", {
+          body: {
+            email: form.email.trim().toLowerCase(),
+            password: form.password,
+            full_name: form.full_name.trim(),
+            referral_code: form.referral_code || null,
+            captcha_id: captcha.id,
+            captcha_answer: answerNum,
+          },
+        });
+        if (error || (data as any)?.error) {
+          const msg = (data as any)?.error ?? error?.message ?? "Could not create account";
+          toast.error(msg);
+          await refreshCaptcha();
           setLoading(false);
           return;
         }
-
-        const { error } = await supabase.auth.signUp({
-          email: form.email.trim().toLowerCase(),
-          password: form.password,
-          options: {
-            data: { full_name: form.full_name.trim(), referral_code: form.referral_code || null },
-          },
-        });
-        if (error) throw error;
-        // Force a fresh sign-in so the user lands on the login screen as requested.
-        await supabase.auth.signOut();
         setPostSignupEmail(form.email.trim().toLowerCase());
         setMode("signin");
         setForm((f) => ({ ...f, password: "" }));
-        setCaptcha(makeCaptcha());
+        setCaptcha(null);
         setCaptchaInput("");
         toast.success("Account created — please sign in to continue.");
       } else {
