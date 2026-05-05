@@ -32,6 +32,42 @@ export type Database = {
         }
         Relationships: []
       }
+      captcha_challenges: {
+        Row: {
+          a: number
+          answer: number
+          attempts: number
+          b: number
+          consumed: boolean
+          created_at: string
+          expires_at: string
+          id: string
+          ip: string | null
+        }
+        Insert: {
+          a: number
+          answer: number
+          attempts?: number
+          b: number
+          consumed?: boolean
+          created_at?: string
+          expires_at?: string
+          id?: string
+          ip?: string | null
+        }
+        Update: {
+          a?: number
+          answer?: number
+          attempts?: number
+          b?: number
+          consumed?: boolean
+          created_at?: string
+          expires_at?: string
+          id?: string
+          ip?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           balance: number
@@ -121,6 +157,30 @@ export type Database = {
           depth?: number
           id?: string
           parent_user?: string
+        }
+        Relationships: []
+      }
+      signup_attempts: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          ip: string
+          success: boolean
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          ip: string
+          success?: boolean
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          ip?: string
+          success?: boolean
         }
         Relationships: []
       }
