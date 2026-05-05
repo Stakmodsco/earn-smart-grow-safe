@@ -112,10 +112,9 @@ const Auth = () => {
             <div className="mb-5 rounded-lg border border-primary/30 bg-primary/10 p-4 text-sm flex gap-3">
               <ShieldCheck className="h-5 w-5 text-primary shrink-0 mt-0.5" />
               <div>
-                <div className="font-medium">Confirm your email</div>
+                <div className="font-medium">Account created 🎉</div>
                 <div className="text-muted-foreground mt-1">
-                  We sent a confirmation link to <span className="font-medium text-foreground">{postSignupEmail}</span>.
-                  Click it, then come back here to sign in.
+                  Sign in below with <span className="font-medium text-foreground">{postSignupEmail}</span> to access your dashboard.
                 </div>
               </div>
             </div>
