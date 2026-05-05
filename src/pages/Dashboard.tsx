@@ -134,10 +134,12 @@ const Dashboard = () => {
           <div className="mt-6">
             <div className="flex items-center justify-between text-xs opacity-90 mb-2">
               <span>Account Level: {profile.level}</span>
-              <span className="tabular-nums">{format(earnedToday)} / {format(cap)} today</span>
+              <span className="tabular-nums">
+                {showBalance ? `${format(earnedToday)} / ${format(cap)} today` : `${meta.symbol} • • • • / ${meta.symbol} • • • •`}
+              </span>
             </div>
             <div className="h-2 rounded-full bg-primary-foreground/20 overflow-hidden">
-              <div className="h-full bg-primary-foreground/80 transition-all" style={{ width: `${capPct}%` }} />
+              <div className="h-full bg-primary-foreground/80 transition-all" style={{ width: `${showBalance ? capPct : 0}%` }} />
             </div>
           </div>
 
