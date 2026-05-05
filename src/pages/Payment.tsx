@@ -79,6 +79,8 @@ const Payment = () => {
   const navigate = useNavigate();
 
   // Hydrate from localStorage cache first to avoid blocking on the network.
+  // We then refetch and, if the backend's `payment_config_version` changed,
+  // purge any stale per-country method caches.
   useEffect(() => {
     try {
       const cached = localStorage.getItem("monetra:app_settings");
@@ -87,15 +89,31 @@ const Payment = () => {
     supabase.from("app_settings").select("*").then(({ data }) => {
       const m: any = {}; data?.forEach((r: any) => (m[r.key] = r.value));
       setSettings(m);
-      try { localStorage.setItem("monetra:app_settings", JSON.stringify(m)); } catch { /* ignore */ }
+      try {
+        localStorage.setItem("monetra:app_settings", JSON.stringify(m));
+        const newVersion = String(m?.payment_config_version ?? "1");
+        const oldVersion = localStorage.getItem("monetra:methods:version");
+        if (oldVersion !== newVersion) {
+          // Drop stale per-country caches so they get rebuilt under the new version.
+          for (let i = localStorage.length - 1; i >= 0; i--) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith("monetra:methods:") && k !== "monetra:methods:version") {
+              localStorage.removeItem(k);
+            }
+          }
+          localStorage.setItem("monetra:methods:version", newVersion);
+        }
+      } catch { /* ignore */ }
     });
   }, []);
 
-  // Cache the resolved payment-method list per country so revisits are instant.
+  // Cache the resolved payment-method list per country (keyed by config version)
+  // so revisits are instant — and so a backend version bump invalidates them.
   useEffect(() => {
     if (!country) return;
     try {
-      const key = `monetra:methods:${country}`;
+      const version = localStorage.getItem("monetra:methods:version") ?? "1";
+      const key = `monetra:methods:${version}:${country}`;
       const list = COUNTRIES.find((c) => c.id === country)?.methods.map((m) => ({ id: m.id, label: m.label })) ?? [];
       localStorage.setItem(key, JSON.stringify(list));
     } catch { /* ignore */ }
