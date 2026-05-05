@@ -492,9 +492,12 @@ const Payment = () => {
             return (
               <AccordionItem key={m.id} value={m.id} className="glass-card rounded-xl border-0 px-4">
                 <AccordionTrigger className="hover:no-underline py-4">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-1">
                     <Icon className="h-5 w-5 text-primary" />
                     <span className="font-medium">{m.label}</span>
+                    <span className="ml-auto mr-2 text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 tabular-nums">
+                      {format(usd, { decimals: 0 })} · {meta.code}
+                    </span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="pb-5">
