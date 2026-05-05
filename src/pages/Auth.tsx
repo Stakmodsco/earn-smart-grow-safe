@@ -57,21 +57,29 @@ const Auth = () => {
         const pwErr = passwordError(form.password);
         if (pwErr) { toast.error(pwErr); setLoading(false); return; }
         if (!form.full_name.trim()) { toast.error("Enter your full name"); setLoading(false); return; }
+        if (Number(captchaInput) !== captcha.answer) {
+          toast.error("Captcha is incorrect — please try again.");
+          setCaptcha(makeCaptcha());
+          setCaptchaInput("");
+          setLoading(false);
+          return;
+        }
 
         const { error } = await supabase.auth.signUp({
           email: form.email.trim().toLowerCase(),
           password: form.password,
           options: {
-            emailRedirectTo: `${window.location.origin}/dashboard`,
             data: { full_name: form.full_name.trim(), referral_code: form.referral_code || null },
           },
         });
         if (error) throw error;
-        // Show "check your email" state and flip to sign-in mode.
+        // Account created — flip to sign-in mode and prompt the user to log in.
         setPostSignupEmail(form.email.trim().toLowerCase());
         setMode("signin");
         setForm((f) => ({ ...f, password: "" }));
-        toast.success("Account created — check your email to confirm, then sign in.");
+        setCaptcha(makeCaptcha());
+        setCaptchaInput("");
+        toast.success("Account created — please sign in to continue.");
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email: form.email.trim().toLowerCase(),
