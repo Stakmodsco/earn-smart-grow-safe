@@ -55,51 +55,48 @@ Deno.serve(async (req) => {
   const captchaAnswer = Number(body?.captcha_answer);
 
   // Basic validation
-  if (!EMAIL_RE.test(email) || email.length > 254) return logAndReturn(sb, ip, email, "Invalid email", 400);
+  if (!EMAIL_RE.test(email) || email.length > 254) return logAndReturn(sb, ip, email, "Invalid email", 400, "validation", "invalid_email");
   if (typeof password !== "string" || password.length < 8 || password.length > 72)
-    return logAndReturn(sb, ip, email, "Password must be 8–72 characters", 400);
-  if (!full_name || full_name.length > 100) return logAndReturn(sb, ip, email, "Full name is required", 400);
+    return logAndReturn(sb, ip, email, "Password must be 8–72 characters", 400, "validation", "weak_password");
+  if (!full_name || full_name.length > 100) return logAndReturn(sb, ip, email, "Full name is required", 400, "validation", "missing_name");
   if (!captchaId || !Number.isFinite(captchaAnswer))
-    return logAndReturn(sb, ip, email, "Captcha is required", 400);
+    return logAndReturn(sb, ip, email, "Captcha is required", 400, "validation", "missing_captcha");
 
-  // Validate captcha — server-side, single-use, with attempt cap and expiry.
   const { data: ch } = await sb
     .from("captcha_challenges")
     .select("id, answer, attempts, consumed, expires_at")
     .eq("id", captchaId)
     .maybeSingle();
 
-  if (!ch) return logAndReturn(sb, ip, email, "Captcha expired — please refresh.", 400);
-  if (ch.consumed) return logAndReturn(sb, ip, email, "Captcha already used — please refresh.", 400);
+  if (!ch) return logAndReturn(sb, ip, email, "Captcha expired — please refresh.", 400, "captcha_failed", "not_found");
+  if (ch.consumed) return logAndReturn(sb, ip, email, "Captcha already used — please refresh.", 400, "captcha_failed", "already_used");
   if (new Date(ch.expires_at).getTime() < Date.now())
-    return logAndReturn(sb, ip, email, "Captcha expired — please refresh.", 400);
+    return logAndReturn(sb, ip, email, "Captcha expired — please refresh.", 400, "captcha_failed", "expired");
   if ((ch.attempts ?? 0) >= 3) {
     await sb.from("captcha_challenges").update({ consumed: true }).eq("id", ch.id);
-    return logAndReturn(sb, ip, email, "Too many wrong attempts — please refresh the captcha.", 400);
+    return logAndReturn(sb, ip, email, "Too many wrong attempts — please refresh the captcha.", 400, "captcha_failed", "max_attempts");
   }
 
   if (ch.answer !== captchaAnswer) {
     await sb.from("captcha_challenges").update({ attempts: (ch.attempts ?? 0) + 1 }).eq("id", ch.id);
-    return logAndReturn(sb, ip, email, "Captcha is incorrect.", 400);
+    return logAndReturn(sb, ip, email, "Captcha is incorrect.", 400, "captcha_failed", "wrong_answer");
   }
 
-  // Mark captcha consumed before creating the user (prevents replay).
   await sb.from("captcha_challenges").update({ consumed: true }).eq("id", ch.id);
 
-  // Create the user with auto-confirmed email so they can sign in immediately.
   const { error: createErr } = await sb.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
     user_metadata: { full_name, referral_code },
   });
-  if (createErr) return logAndReturn(sb, ip, email, createErr.message, 400);
+  if (createErr) return logAndReturn(sb, ip, email, createErr.message, 400, "auth_error", createErr.message);
 
-  await sb.from("signup_attempts").insert({ ip, email, success: true });
+  await sb.from("signup_attempts").insert({ ip, email, success: true, kind: "success", reason: null });
   return json({ ok: true });
 });
 
-async function logAndReturn(sb: ReturnType<typeof svc>, ip: string, email: string, error: string, status: number) {
-  await sb.from("signup_attempts").insert({ ip, email, success: false });
+async function logAndReturn(sb: ReturnType<typeof svc>, ip: string, email: string, error: string, status: number, kind = "error", reason: string | null = null) {
+  await sb.from("signup_attempts").insert({ ip, email, success: false, kind, reason });
   return json({ error }, status);
 }
