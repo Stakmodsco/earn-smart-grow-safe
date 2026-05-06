@@ -140,7 +140,7 @@ const Admin = () => {
                   <tbody>{withdrawals.map((w) => (
                     <tr key={w.id} className="border-t border-border align-top">
                       <Td><div>{w.profiles?.full_name || "—"}</div><div className="text-xs text-muted-foreground">{w.profiles?.email}</div></Td>
-                      <Td className="font-medium">${Number(w.amount).toFixed(2)}</Td>
+                      <Td className="font-medium">{format(w.amount)}</Td>
                       <Td className="capitalize">{w.payout_method}</Td>
                       <Td className="max-w-xs"><div className="text-xs text-muted-foreground whitespace-pre-wrap">{w.payout_details}</div></Td>
                       <Td><StatusBadge status={w.status} /></Td>
