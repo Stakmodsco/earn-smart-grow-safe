@@ -139,7 +139,14 @@ const Payment = () => {
     }
   }, [geoCountry, residenceCode]);
 
-  const activeCountry = useMemo(() => COUNTRIES.find((c) => c.id === country) ?? COUNTRIES[0], [country]);
+  const activeCountry = useMemo(() => {
+    const base = COUNTRIES.find((c) => c.id === country) ?? COUNTRIES[0];
+    const overrides = (settings?.payment_methods_overrides as Record<string, any> | undefined) ?? {};
+    const enabled: string[] | undefined = overrides[base.id]?.enabled_methods;
+    if (!enabled) return base;
+    const filtered = base.methods.filter((m) => enabled.includes(m.id));
+    return filtered.length > 0 ? { ...base, methods: filtered } : base;
+  }, [country, settings]);
   const activeMethod = useMemo(
     () => activeCountry.methods.find((m) => m.id === method) ?? activeCountry.methods[0],
     [activeCountry, method],
