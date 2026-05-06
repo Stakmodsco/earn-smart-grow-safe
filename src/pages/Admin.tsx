@@ -184,6 +184,18 @@ const Admin = () => {
             <TaskCatalogPanel />
           </TabsContent>
 
+          <TabsContent value="payments">
+            <PaymentMethodsPanel
+              overrides={settings.payment_methods_overrides ?? {}}
+              version={settings.payment_config_version ?? 1}
+              onSave={loadAll}
+            />
+          </TabsContent>
+
+          <TabsContent value="alerts">
+            <AlertsPanel />
+          </TabsContent>
+
           <TabsContent value="admins">
             <AdminInvitePanel inviteCode={settings.admin_invite_code} onRotated={loadAll} />
           </TabsContent>
