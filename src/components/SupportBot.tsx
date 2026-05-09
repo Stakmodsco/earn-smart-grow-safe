@@ -109,14 +109,17 @@ export const SupportBot = () => {
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData.user?.id ?? null;
 
-      // Upload attachments (if any) to the public support-attachments bucket.
-      const urls: string[] = [];
+      // Upload attachments to the private support-attachments bucket. We
+      // store the storage paths on the ticket — the admin inbox creates
+      // signed URLs on demand to preview them.
+      const paths: string[] = [];
       for (const file of ticketFiles) {
         if (file.size > 10 * 1024 * 1024) {
           toast.error(`${file.name} is larger than 10MB and was skipped.`);
           continue;
         }
-        const path = `${userId ?? "anon"}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+        const folder = userId ?? "anon";
+        const path = `${folder}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
         const { error: upErr } = await supabase.storage
           .from("support-attachments")
           .upload(path, file, { upsert: false });
@@ -124,8 +127,7 @@ export const SupportBot = () => {
           toast.error(`Failed to upload ${file.name}`);
           continue;
         }
-        const { data: pub } = supabase.storage.from("support-attachments").getPublicUrl(path);
-        if (pub?.publicUrl) urls.push(pub.publicUrl);
+        paths.push(path);
       }
 
       const { error } = await supabase.from("support_tickets").insert({
