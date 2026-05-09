@@ -692,4 +692,224 @@ const PaymentMethodsPanel = ({ overrides, version, onSave }: { overrides: Record
     </div>
   );
 };
+
+type Ticket = {
+  id: string;
+  user_id: string | null;
+  email: string | null;
+  subject: string | null;
+  message: string;
+  attachments: string[];
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
+const TICKET_STATUSES = ["open", "in_progress", "resolved", "closed"] as const;
+
+const SupportTicketsPanel = () => {
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [active, setActive] = useState<Ticket | null>(null);
+  const [signed, setSigned] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from("support_tickets")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(200);
+    setTickets((data ?? []) as Ticket[]);
+    setLoading(false);
+  };
+  useEffect(() => { load(); }, []);
+
+  // Sign attachment URLs lazily for whichever ticket is open.
+  useEffect(() => {
+    if (!active?.attachments?.length) return;
+    (async () => {
+      const map: Record<string, string> = {};
+      for (const path of active.attachments) {
+        // Old tickets may store full URLs (legacy public bucket). Use as-is.
+        if (/^https?:\/\//.test(path)) { map[path] = path; continue; }
+        const { data } = await supabase.storage
+          .from("support-attachments")
+          .createSignedUrl(path, 60 * 10);
+        if (data?.signedUrl) map[path] = data.signedUrl;
+      }
+      setSigned(map);
+    })();
+  }, [active]);
+
+  const updateStatus = async (id: string, status: string) => {
+    const { error } = await supabase
+      .from("support_tickets")
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success(`Ticket marked ${status.replace("_", " ")}`);
+    setActive((t) => (t && t.id === id ? { ...t, status } : t));
+    load();
+  };
+
+  const filtered = tickets.filter((t) => {
+    if (statusFilter !== "all" && t.status !== statusFilter) return false;
+    if (!query.trim()) return true;
+    const q = query.toLowerCase();
+    return (
+      (t.subject ?? "").toLowerCase().includes(q) ||
+      (t.email ?? "").toLowerCase().includes(q) ||
+      t.message.toLowerCase().includes(q) ||
+      t.id.includes(q)
+    );
+  });
+
+  const statusBadgeClass = (s: string) => {
+    if (s === "open") return "bg-amber-500/15 text-amber-600 border-amber-500/30";
+    if (s === "in_progress") return "bg-primary/15 text-primary border-primary/30";
+    if (s === "resolved") return "bg-emerald-500/15 text-emerald-600 border-emerald-500/30";
+    return "bg-muted text-muted-foreground border-border";
+  };
+
+  return (
+    <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] gap-4">
+      <Card className="glass-card p-5 rounded-xl">
+        <div className="flex flex-col sm:flex-row gap-2 mb-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search subject, email, message…"
+              className="pl-9"
+            />
+          </div>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="bg-secondary/40 border border-border rounded-md px-3 text-sm"
+          >
+            <option value="all">All statuses</option>
+            {TICKET_STATUSES.map((s) => (
+              <option key={s} value={s}>{s.replace("_", " ")}</option>
+            ))}
+          </select>
+          <Button size="sm" variant="ghost" onClick={load} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          </Button>
+        </div>
+        <div className="text-xs text-muted-foreground mb-2">{filtered.length} ticket{filtered.length === 1 ? "" : "s"}</div>
+        <div className="divide-y divide-border max-h-[600px] overflow-y-auto -mx-1">
+          {filtered.length === 0 ? (
+            <Empty label="No tickets match your filters" />
+          ) : (
+            filtered.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setActive(t)}
+                className={`w-full text-left px-2 py-3 hover:bg-secondary/40 rounded transition-colors ${active?.id === t.id ? "bg-secondary/60" : ""}`}
+              >
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <div className="font-medium truncate">{t.subject || "(no subject)"}</div>
+                  <span className={`text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full border ${statusBadgeClass(t.status)}`}>
+                    {t.status.replace("_", " ")}
+                  </span>
+                </div>
+                <div className="text-xs text-muted-foreground truncate">{t.email || "anonymous"} · {new Date(t.created_at).toLocaleString()}</div>
+                <div className="text-xs mt-1 line-clamp-2 text-muted-foreground">{t.message}</div>
+                {t.attachments?.length > 0 && (
+                  <div className="text-[10px] text-primary mt-1 flex items-center gap-1">
+                    <Paperclip className="h-3 w-3" /> {t.attachments.length} attachment{t.attachments.length === 1 ? "" : "s"}
+                  </div>
+                )}
+              </button>
+            ))
+          )}
+        </div>
+      </Card>
+
+      <Card className="glass-card p-6 rounded-xl">
+        {!active ? (
+          <div className="h-full grid place-items-center text-muted-foreground text-sm py-20">
+            Select a ticket to view details.
+          </div>
+        ) : (
+          <div className="space-y-5">
+            <div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="font-display text-xl font-semibold">{active.subject || "(no subject)"}</h3>
+                <span className={`text-xs uppercase tracking-wide px-2 py-1 rounded-full border ${statusBadgeClass(active.status)}`}>
+                  {active.status.replace("_", " ")}
+                </span>
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">
+                From <span className="font-medium">{active.email || "anonymous"}</span>
+                {" · "}{new Date(active.created_at).toLocaleString()}
+                {" · "}<code className="text-[10px]">{active.id.slice(0, 8)}</code>
+              </div>
+            </div>
+
+            <div className="bg-secondary/30 border border-border rounded-lg p-4 whitespace-pre-wrap text-sm">
+              {active.message}
+            </div>
+
+            {active.attachments?.length > 0 && (
+              <div>
+                <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2 flex items-center gap-1">
+                  <Paperclip className="h-3 w-3" /> Attachments
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {active.attachments.map((path) => {
+                    const url = signed[path];
+                    const isImage = /\.(png|jpe?g|gif|webp|heic|bmp|svg)$/i.test(path);
+                    return (
+                      <a
+                        key={path}
+                        href={url ?? "#"}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block border border-border rounded-lg overflow-hidden bg-secondary/20 hover:border-primary/40 transition-colors"
+                      >
+                        {isImage && url ? (
+                          <img src={url} alt="attachment" className="h-28 w-full object-cover" />
+                        ) : (
+                          <div className="h-28 grid place-items-center text-xs text-muted-foreground p-2">
+                            <Paperclip className="h-5 w-5 mb-1" />
+                            <span className="truncate w-full text-center">{path.split("/").pop()}</span>
+                          </div>
+                        )}
+                        <div className="p-2 text-[10px] truncate text-muted-foreground">{path.split("/").pop()}</div>
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div>
+              <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Update status</div>
+              <div className="flex flex-wrap gap-2">
+                {TICKET_STATUSES.map((s) => (
+                  <Button
+                    key={s}
+                    size="sm"
+                    variant={active.status === s ? "soft" : "outline"}
+                    onClick={() => updateStatus(active.id, s)}
+                    disabled={active.status === s}
+                  >
+                    {s.replace("_", " ")}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+};
+
 export default Admin;
