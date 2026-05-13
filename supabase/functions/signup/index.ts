@@ -93,7 +93,41 @@ Deno.serve(async (req) => {
   if (createErr) return logAndReturn(sb, ip, email, createErr.message, 400, "auth_error", createErr.message);
 
   await sb.from("signup_attempts").insert({ ip, email, success: true, kind: "success", reason: null });
-  return json({ ok: true });
+  
+  const recoveryKeys = Array.from({ length: 10 }, () =>
+  crypto.randomUUID().replace(/-/g, "").slice(0, 12).toUpperCase()
+);
+
+const hashedKeys = await Promise.all(
+  recoveryKeys.map(async (key) => {
+    const data = new TextEncoder().encode(key);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+
+    return Array.from(new Uint8Array(hashBuffer))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+  })
+);
+
+const { data: userData } = await sb.auth.admin.listUsers();
+
+const createdUser = userData.users.find((u) => u.email === email);
+
+if (!createdUser) {
+  return json({ error: "Account created but recovery keys could not be generated" }, 500);
+}
+
+await sb.from("user_recovery_keys").insert(
+  hashedKeys.map((hash) => ({
+    user_id: createdUser.id,
+    recovery_key_hash: hash,
+    used: false,
+  }))
+);
+
+return json({
+  ok: true,
+  recoveryKeys,
 });
 
 async function logAndReturn(sb: ReturnType<typeof svc>, ip: string, email: string, error: string, status: number, kind = "error", reason: string | null = null) {
