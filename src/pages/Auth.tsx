@@ -21,6 +21,11 @@ import {
 
 type Captcha = { id: string; a: number; b: number };
 
+const generateRecoveryKeys = () =>
+  Array.from({ length: 10 }, () =>
+    crypto.randomUUID().replace(/-/g, "").slice(0, 12).toUpperCase()
+  );
+
 async function fetchCaptcha(): Promise<Captcha> {
   const { data, error } = await supabase.functions.invoke("captcha-challenge", {
     method: "POST",
@@ -36,7 +41,6 @@ const Auth = () => {
 
   const [mode, setMode] = useState<"signin" | "signup">(initialMode);
   const [loading, setLoading] = useState(false);
-
   const [form, setForm] = useState({
     email: "",
     password: "",
@@ -49,6 +53,7 @@ const Auth = () => {
   const [captchaLoading, setCaptchaLoading] = useState(false);
   const [postSignupEmail, setPostSignupEmail] = useState<string | null>(null);
   const [recoveryKeys, setRecoveryKeys] = useState<string[]>([]);
+  const [showRecoveryKeys, setShowRecoveryKeys] = useState(false);
 
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -77,12 +82,55 @@ const Auth = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
 
+  useEffect(() => {
+    const emailIsValid = !validateEmail(form.email);
+
+    const readyForKeys =
+      mode === "signup" &&
+      form.full_name.trim().length > 0 &&
+      emailIsValid &&
+      form.password.length >= 8;
+
+    if (readyForKeys && recoveryKeys.length === 0) {
+      setRecoveryKeys(generateRecoveryKeys());
+      setShowRecoveryKeys(false);
+    }
+
+    if (!readyForKeys && recoveryKeys.length > 0) {
+      setRecoveryKeys([]);
+      setShowRecoveryKeys(false);
+    }
+  }, [mode, form.full_name, form.email, form.password, recoveryKeys.length]);
+
   const passwordChecks = checkPassword(form.password);
 
   const suggestStrongPassword = () => {
     const password = generateStrongPassword();
     setForm((f) => ({ ...f, password }));
     toast.success("Strong password suggested. Save it somewhere safe.");
+  };
+
+  const downloadRecoveryKeys = () => {
+    if (!recoveryKeys.length) return;
+
+    const content = [
+      "Cheddar4u Recovery Keys",
+      "",
+      "Save these keys somewhere safe.",
+      "If you lose them, your account cannot be recovered.",
+      "",
+      ...recoveryKeys.map((key, index) => `Key ${index + 1}: ${key}`),
+    ].join("\n");
+
+    const blob = new Blob([content], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "cheddar4u-recovery-keys.txt";
+    a.click();
+
+    URL.revokeObjectURL(url);
   };
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -120,6 +168,12 @@ const Auth = () => {
           return;
         }
 
+        if (recoveryKeys.length !== 10) {
+          toast.error("Recovery keys were not generated. Please try again.");
+          setLoading(false);
+          return;
+        }
+
         if (!captcha) {
           toast.error("Captcha not loaded. Please refresh.");
           setLoading(false);
@@ -142,6 +196,7 @@ const Auth = () => {
             referral_code: form.referral_code || null,
             captcha_id: captcha.id,
             captcha_answer: answerNum,
+            recovery_keys: recoveryKeys,
           },
         });
 
@@ -157,15 +212,10 @@ const Auth = () => {
           return;
         }
 
-        const newRecoveryKeys = (data as any)?.recoveryKeys;
-
-        if (newRecoveryKeys?.length) {
-          setRecoveryKeys(newRecoveryKeys);
-          localStorage.setItem(
-            "generatedRecoveryKeys",
-            JSON.stringify(newRecoveryKeys)
-          );
-        }
+        localStorage.setItem(
+          "generatedRecoveryKeys",
+          JSON.stringify(recoveryKeys)
+        );
 
         setPostSignupEmail(form.email.trim().toLowerCase());
         setMode("signin");
@@ -173,7 +223,7 @@ const Auth = () => {
         setCaptcha(null);
         setCaptchaInput("");
 
-        toast.success("Account created — save your recovery keys.");
+        toast.success("Account created — keep your recovery keys safe.");
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email: form.email.trim().toLowerCase(),
@@ -217,7 +267,6 @@ const Auth = () => {
 
               <div>
                 <div className="font-medium">Account created 🎉</div>
-
                 <div className="text-muted-foreground mt-1">
                   Sign in below with{" "}
                   <span className="font-medium text-foreground">
@@ -225,27 +274,6 @@ const Auth = () => {
                   </span>{" "}
                   to access your dashboard.
                 </div>
-              </div>
-            </div>
-          )}
-
-          {mode === "signin" && recoveryKeys.length > 0 && (
-            <div className="mb-5 rounded-lg border border-red-500/40 bg-red-500/10 p-4 text-sm">
-              <div className="font-semibold text-red-500">
-                Save your recovery keys
-              </div>
-
-              <p className="mt-2 text-muted-foreground">
-                These keys are shown only once. If you lose them, your account
-                cannot be recovered.
-              </p>
-
-              <div className="mt-4 grid grid-cols-2 gap-2 font-mono text-xs">
-                {recoveryKeys.map((key) => (
-                  <div key={key} className="rounded border bg-background p-2">
-                    {key}
-                  </div>
-                ))}
               </div>
             </div>
           )}
@@ -333,6 +361,65 @@ const Auth = () => {
                 </ul>
               )}
             </Field>
+
+            {mode === "signup" && recoveryKeys.length > 0 && (
+              <div className="rounded-xl border border-red-500/40 bg-red-500/10 p-5 text-sm shadow-lg">
+                <div className="font-semibold text-red-500 text-base">
+                  Recovery keys generated
+                </div>
+
+                <p className="mt-2 text-muted-foreground">
+                  Save these keys safely. If you lose them, your account cannot
+                  be recovered.
+                </p>
+
+                <div className="mt-4 grid grid-cols-1 gap-2 font-mono text-xs">
+                  {recoveryKeys.map((key, index) => (
+                    <div
+                      key={key}
+                      className="flex items-center justify-between rounded border bg-background p-2"
+                    >
+                      <span>Key {index + 1}</span>
+                      <span>{showRecoveryKeys ? key : "************"}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-4 flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-1/2"
+                    onClick={() => setShowRecoveryKeys((v) => !v)}
+                  >
+                    {showRecoveryKeys ? "Hide keys" : "View keys"}
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="hero"
+                    className="w-1/2"
+                    onClick={downloadRecoveryKeys}
+                  >
+                    Download keys
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {mode === "signup" && recoveryKeys.length === 0 && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  setRecoveryKeys(generateRecoveryKeys());
+                  setShowRecoveryKeys(false);
+                }}
+              >
+                Generate recovery keys
+              </Button>
+            )}
 
             {mode === "signup" && (
               <Field label="Referral code (optional)">
@@ -424,6 +511,7 @@ const Auth = () => {
                     setMode("signup");
                     setPostSignupEmail(null);
                     setRecoveryKeys([]);
+                    setShowRecoveryKeys(false);
                   }}
                 >
                   Create one
