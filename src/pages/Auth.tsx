@@ -33,6 +33,7 @@ const Auth = () => {
   // After a successful signup we want to switch the form into "signin" mode
   // and surface a clear "check your email" notice. We track that locally.
   const [postSignupEmail, setPostSignupEmail] = useState<string | null>(null);
+  const [recoveryKeys, setRecoveryKeys] = useState<string[]>([]);
   const navigate = useNavigate();
   const { user } = useAuth();
   const { format } = useCurrency();
@@ -105,10 +106,11 @@ const Auth = () => {
           return;
         }
         // ADD RECOVERY KEY CODE HERE
-        const recoveryKeys = (data as any)?.recoveryKeys;
-
-        if(recoveryKeys?.length) {
-          localStorage.setItem("generatedRecoveryKeys", JSON.stringify(recoveryKeys));
+        const newRecoveryKeys = (data as any)?.recoveryKeys;
+        
+        if (newRecoveryKeys?.length) {
+          setRecoveryKeys(newRecoveryKeys);
+          localStorage.setItem("generatedRecoveryKeys", JSON.stringify(newRecoveryKeys));
         }
         
         setPostSignupEmail(form.email.trim().toLowerCase());
@@ -146,6 +148,25 @@ const Auth = () => {
 
           {/* Post-signup confirmation notice */}
           {mode === "signin" && postSignupEmail && (
+      {mode === "signin" && recoveryKeys.length > 0 && (
+  <div className="mb-5 rounded-lg border border-red-500/40 bg-red-500/10 p-4 text-sm">
+    <div className="font-semibold text-red-500">
+      Save your recovery keys
+    </div>
+
+    <p className="mt-2 text-muted-foreground">
+      These keys are shown only once. If you lose them, your account cannot be recovered.
+    </p>
+
+    <div className="mt-4 grid grid-cols-2 gap-2 font-mono text-xs">
+      {recoveryKeys.map((key) => (
+        <div key={key} className="rounded border bg-background p-2">
+          {key}
+        </div>
+      ))}
+    </div>
+  </div>
+)}
             <div className="mb-5 rounded-lg border border-primary/30 bg-primary/10 p-4 text-sm flex gap-3">
               <ShieldCheck className="h-5 w-5 text-primary shrink-0 mt-0.5" />
               <div>
