@@ -40,7 +40,8 @@ function getIp(req: Request): string {
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 async function hashRecoveryKey(key: string) {
-  const data = new TextEncoder().encode(key);
+  const normalizedKey = key.replace(/\s/g, "").toUpperCase();
+  const data = new TextEncoder().encode(normalizedKey);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
 
   return Array.from(new Uint8Array(hashBuffer))
@@ -130,6 +131,12 @@ Deno.serve(async (req) => {
   const captchaId = String(body?.captcha_id ?? "");
   const captchaAnswer = Number(body?.captcha_answer);
 
+  const recoveryKeys = Array.isArray(body?.recovery_keys)
+    ? body.recovery_keys.map((key: unknown) =>
+        String(key).replace(/\s/g, "").toUpperCase()
+      )
+    : [];
+
   if (!EMAIL_RE.test(email) || email.length > 254) {
     return logAndReturn(
       sb,
@@ -163,6 +170,21 @@ Deno.serve(async (req) => {
       400,
       "validation",
       "missing_name"
+    );
+  }
+
+  if (
+    recoveryKeys.length !== 10 ||
+    recoveryKeys.some((key: string) => key.length !== 12)
+  ) {
+    return logAndReturn(
+      sb,
+      ip,
+      email,
+      "Recovery keys were not generated. Please try signing up again.",
+      400,
+      "recovery_keys_error",
+      "invalid_recovery_keys"
     );
   }
 
@@ -290,12 +312,8 @@ Deno.serve(async (req) => {
 
   const user = createdUserData.user;
 
-  const recoveryKeys = Array.from({ length: 10 }, () =>
-    crypto.randomUUID().replace(/-/g, "").slice(0, 12).toUpperCase()
-  );
-
   const hashedKeys = await Promise.all(
-    recoveryKeys.map((key) => hashRecoveryKey(key))
+    recoveryKeys.map((key: string) => hashRecoveryKey(key))
   );
 
   const { error: keysErr } = await sb.from("user_recovery_keys").insert(
@@ -330,6 +348,5 @@ Deno.serve(async (req) => {
 
   return json({
     ok: true,
-    recoveryKeys,
   });
 });
