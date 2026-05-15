@@ -53,14 +53,26 @@ export function passwordError(pw: string): string | null {
   return null;
 }
 
-export function generateStrongPassword(): string {
+export function generateStrongPassword() {
   const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
   const lower = "abcdefghijkmnopqrstuvwxyz";
-  const digits = "23456789";
+  const numbers = "23456789";
   const symbols = "!@#$%^&*";
-  const all = `${upper}${lower}${digits}${symbols}`;
-  const pick = (chars: string) => chars[Math.floor(Math.random() * chars.length)];
-  const chars = [pick(upper), pick(lower), pick(digits), pick(symbols)];
-  while (chars.length < 16) chars.push(pick(all));
-  return chars.sort(() => Math.random() - 0.5).join("");
+
+  const all = upper + lower + numbers + symbols;
+
+  const required = [
+    upper[Math.floor(Math.random() * upper.length)],
+    lower[Math.floor(Math.random() * lower.length)],
+    numbers[Math.floor(Math.random() * numbers.length)],
+    symbols[Math.floor(Math.random() * symbols.length)],
+  ];
+
+  const remaining = Array.from({ length: 8 }, () =>
+    all[Math.floor(Math.random() * all.length)]
+  );
+
+  return [...required, ...remaining]
+    .sort(() => Math.random() - 0.5)
+    .join("");
 }
