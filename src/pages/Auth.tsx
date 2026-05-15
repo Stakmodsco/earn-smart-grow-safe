@@ -83,24 +83,22 @@ const Auth = () => {
   }, [mode]);
 
   useEffect(() => {
-    const emailIsValid = !validateEmail(form.email);
+  const readyForKeys =
+    mode === "signup" &&
+    form.full_name.trim().length > 0 &&
+    form.email.trim().includes("@") &&
+    form.password.length >= 8;
 
-    const readyForKeys =
-      mode === "signup" &&
-      form.full_name.trim().length > 0 &&
-      emailIsValid &&
-      form.password.length >= 8;
+  if (readyForKeys && recoveryKeys.length === 0) {
+    setRecoveryKeys(generateRecoveryKeys());
+    setShowRecoveryKeys(false);
+  }
 
-    if (readyForKeys && recoveryKeys.length === 0) {
-      setRecoveryKeys(generateRecoveryKeys());
-      setShowRecoveryKeys(false);
-    }
-
-    if (!readyForKeys && recoveryKeys.length > 0) {
-      setRecoveryKeys([]);
-      setShowRecoveryKeys(false);
-    }
-  }, [mode, form.full_name, form.email, form.password, recoveryKeys.length]);
+  if (!readyForKeys && recoveryKeys.length > 0) {
+    setRecoveryKeys([]);
+    setShowRecoveryKeys(false);
+  }
+}, [mode, form.full_name, form.email, form.password, recoveryKeys.length]);
 
   const passwordChecks = checkPassword(form.password);
 
