@@ -23,6 +23,7 @@ import Payment from "./pages/Payment.tsx";
 import DailyCheckin from "./pages/DailyCheckin.tsx";
 import ForgotPassword from "./pages/ForgotPassword.tsx";
 import ResetPassword from "./pages/ResetPassword.tsx";
+import AccountSecurity from "./pages/AccountSecurity.tsx";
 import { SupportBot } from "@/components/SupportBot";
 import { IdleLogoutGuard } from "@/components/IdleLogoutGuard";
 import { AuthNudgeModal } from "@/components/AuthNudgeModal";
@@ -53,6 +54,7 @@ const App = () => (
           <Route path="/activities" element={<Activities />} />
           <Route path="/earnings" element={<Earnings />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/account-security" element={<AccountSecurity />} />
           <Route path="/referrals" element={<Referrals />} />
           <Route path="/receipts" element={<Receipts />} />
           <Route path="/checkin-history" element={<CheckinHistory />} />

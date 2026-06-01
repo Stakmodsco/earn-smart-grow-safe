@@ -74,8 +74,8 @@ const Profile = () => {
 
         <Card className="glass-card p-6 rounded-xl mt-6">
           <h3 className="font-display text-xl font-semibold mb-4">Security</h3>
-          <Button variant="outline" className="w-full justify-start" onClick={onResetPassword}>
-            <Lock className="h-4 w-4 mr-2" /> Send password reset email
+          <Button asChild variant="outline" className="w-full justify-start">
+            <Link to="/account-security"><Lock className="h-4 w-4 mr-2" /> Manage recovery keys</Link>
           </Button>
         </Card>
 
