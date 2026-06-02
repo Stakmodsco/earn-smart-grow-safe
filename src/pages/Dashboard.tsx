@@ -11,23 +11,18 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   ArrowUpRight,
   Banknote,
-  Calendar,
   ChevronRight,
-  Crown,
   Eye,
   EyeOff,
   Flame,
   Headphones,
-  Link2,
   ListChecks,
   Lock,
-  Play,
-  Sparkles,
   TrendingUp,
-  UserPlus,
   Users,
   Wallet,
 } from "lucide-react";
+import { Icon3D, Icon3DName } from "@/components/Icon3D";
 
 type Settings = {
   daily_earning_caps: Record<string, number>;
@@ -93,13 +88,13 @@ const Dashboard = () => {
     return "Good evening";
   })();
 
-  const tiles = [
-    { id: "watch", icon: Play, title: "Watch & Earn", unlock: 1 },
-    { id: "checkin", icon: Calendar, title: "Daily Check-in", unlock: 0 },
-    { id: "spin", icon: Sparkles, title: "Spin & Win", unlock: 1 },
-    { id: "hookup", icon: Link2, title: "Connect", unlock: 2 },
-    { id: "vip", icon: Crown, title: "VIP Stream", unlock: 3 },
-    { id: "creator", icon: UserPlus, title: "Creator", unlock: 3 },
+  const tiles: { id: string; icon: Icon3DName; title: string; unlock: number }[] = [
+    { id: "watch", icon: "play", title: "Watch & Earn", unlock: 1 },
+    { id: "checkin", icon: "calendar", title: "Daily Check-in", unlock: 0 },
+    { id: "spin", icon: "sparkles", title: "Spin & Win", unlock: 1 },
+    { id: "hookup", icon: "link", title: "Connect", unlock: 2 },
+    { id: "vip", icon: "crown", title: "VIP Stream", unlock: 3 },
+    { id: "creator", icon: "userplus", title: "Creator", unlock: 3 },
   ];
 
   return (
@@ -178,7 +173,6 @@ const Dashboard = () => {
         <div className="text-xs uppercase tracking-widest text-primary mb-3">Ways to earn</div>
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-6">
           {tiles.map((t) => {
-            const Icon = t.icon;
             const locked = profile.level < t.unlock;
             return (
               <Link
@@ -191,7 +185,7 @@ const Dashboard = () => {
                     <Lock className="h-3 w-3" />
                   </span>
                 )}
-                <Icon className={`h-6 w-6 mx-auto ${locked ? "text-muted-foreground" : "text-primary"}`} />
+                <Icon3D name={t.icon} size={32} className={`mx-auto ${locked ? "opacity-50 grayscale" : ""}`} />
                 <div className="text-[11px] font-medium mt-2 leading-tight">{t.title}</div>
               </Link>
             );

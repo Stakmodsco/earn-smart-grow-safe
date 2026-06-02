@@ -1,12 +1,12 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Home, Coins, Zap, User } from "lucide-react";
+import { Icon3D, Icon3DName } from "@/components/Icon3D";
 import { cn } from "@/lib/utils";
 
-const items = [
-  { to: "/dashboard", icon: Home, label: "Home" },
-  { to: "/earnings", icon: Coins, label: "Earnings" },
-  { to: "/activities", icon: Zap, label: "Activities" },
-  { to: "/profile", icon: User, label: "Profile" },
+const items: { to: string; icon: Icon3DName; label: string }[] = [
+  { to: "/dashboard", icon: "home", label: "Home" },
+  { to: "/earnings", icon: "coins", label: "Earnings" },
+  { to: "/activities", icon: "zap", label: "Activities" },
+  { to: "/profile", icon: "user", label: "Profile" },
 ];
 
 export const BottomNav = () => {
@@ -21,7 +21,7 @@ export const BottomNav = () => {
       <div className="h-20 md:hidden" aria-hidden />
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 backdrop-blur-xl bg-background/85 border-t border-border/60">
         <ul className="grid grid-cols-4 h-16">
-          {items.map(({ to, icon: Icon, label }) => (
+          {items.map(({ to, icon, label }) => (
             <li key={to}>
               <NavLink
                 to={to}
@@ -32,7 +32,7 @@ export const BottomNav = () => {
                   )
                 }
               >
-                <Icon className="h-5 w-5" />
+                <Icon3D name={icon} size={24} />
                 <span className="font-medium tracking-wide">{label}</span>
               </NavLink>
             </li>

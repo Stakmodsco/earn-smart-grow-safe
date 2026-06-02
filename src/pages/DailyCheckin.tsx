@@ -8,8 +8,8 @@ import { useAuth, useProfile } from "@/hooks/useAuth";
 import { useCurrency } from "@/hooks/useCurrency";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Calendar, CheckCircle2, Clock, Sparkles } from "lucide-react";
-import { GlossyTile } from "@/components/GlossyTile";
+import { CheckCircle2, Clock } from "lucide-react";
+import { Icon3D } from "@/components/Icon3D";
 import { BackButton } from "@/components/BackButton";
 
 const DailyCheckin = () => {
@@ -88,7 +88,7 @@ const DailyCheckin = () => {
               onClick={handleCheckin}
               disabled={busy}
             >
-              <Sparkles className="h-4 w-4" />
+              <Icon3D name="sparkles" size={18} />
               {busy ? "Crediting…" : "Check-in Now"}
             </Button>
           ) : (
@@ -102,7 +102,7 @@ const DailyCheckin = () => {
         {/* Explainer */}
         <Card className="glass-card rounded-2xl p-8 mt-6">
           <div className="flex items-center gap-3 mb-4">
-            <GlossyTile icon={Calendar} variant="primary" size="md" />
+            <Icon3D name="calendar" size={44} />
             <h3 className="font-display text-xl font-semibold">How Daily Check-in Works</h3>
           </div>
           <p className="text-sm text-muted-foreground mb-5">
