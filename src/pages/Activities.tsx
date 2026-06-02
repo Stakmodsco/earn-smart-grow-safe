@@ -9,18 +9,8 @@ import { useCurrency } from "@/hooks/useCurrency";
 import { supabase } from "@/integrations/supabase/client";
 import { BackButton } from "@/components/BackButton";
 import { toast } from "sonner";
-import {
-  Calendar,
-  Crown,
-  Link2,
-  Lock,
-  Play,
-  Sparkles,
-  UserPlus,
-  Users,
-  ChevronRight,
-  CheckCircle2,
-} from "lucide-react";
+import { Lock, ChevronRight, CheckCircle2 } from "lucide-react";
+import { Icon3D, Icon3DName } from "@/components/Icon3D";
 
 type Settings = {
   daily_earning_caps: Record<string, number>;
