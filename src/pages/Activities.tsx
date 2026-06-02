@@ -23,7 +23,7 @@ type Settings = {
 
 type Tile = {
   id: string;
-  icon: any;
+  icon: Icon3DName;
   title: string;
   subtitle: string;
   unlockLevel: number; // 0 = always unlocked
@@ -90,22 +90,22 @@ const Activities = () => {
   const tierFree = settings.tier_tile_unlocks?.[lvl] ?? [];
 
   const tiles: Tile[] = [
-    { id: "watch", icon: Play, title: "Watch & Earn",
+    { id: "watch", icon: "play", title: "Watch & Earn",
       subtitle: profile.level >= 1 ? `+ ${format(watchReward)} • ${watchDone}/${watchLimit} today` : "Unlocks at Level 1",
       unlockLevel: 1, action: "watch" },
-    { id: "checkin", icon: Calendar, title: "Daily Check-in",
+    { id: "checkin", icon: "calendar", title: "Daily Check-in",
       subtitle: canCheckin ? `+ ${format(checkinReward, { decimals: 3 })}` : "Available again in 24h",
       unlockLevel: 0, action: "checkin" },
-    { id: "spin", icon: Sparkles, title: "Spin & Win",
+    { id: "spin", icon: "sparkles", title: "Spin & Win",
       subtitle: profile.level >= 1 ? `+ ${format(spinReward)} • ${spinDone}/${spinLimit} today` : "Unlocks at Level 1",
       unlockLevel: 1, action: "spin" },
-    { id: "hookup", icon: Link2, title: "Connect Tasks",
+    { id: "hookup", icon: "link", title: "Connect Tasks",
       subtitle: "Partner integrations — unlock for " + format(fees.hookup ?? 0),
       unlockLevel: 0, premium: true },
-    { id: "vip", icon: Crown, title: "VIP Stream",
+    { id: "vip", icon: "crown", title: "VIP Stream",
       subtitle: "Premium tasks — unlock for " + format(fees.vip ?? 0),
       unlockLevel: 0, premium: true },
-    { id: "creator", icon: UserPlus, title: "Become a Creator",
+    { id: "creator", icon: "userplus", title: "Become a Creator",
       subtitle: "Apply to publish tasks — unlock for " + format(fees.creator ?? 0),
       unlockLevel: 0, premium: true },
   ];
@@ -172,7 +172,7 @@ const Activities = () => {
             const tierLocked = profile.level < t.unlockLevel;
             const premiumLocked = !!t.premium && !isPremiumUnlocked(t.id);
             const locked = tierLocked || premiumLocked;
-            const Icon = t.icon;
+            const locked = tierLocked || premiumLocked;
             return (
               <button
                 key={t.id}
@@ -192,8 +192,8 @@ const Activities = () => {
                     <CheckCircle2 className="h-3 w-3" /> Unlocked
                   </span>
                 )}
-                <div className="h-11 w-11 rounded-lg bg-primary/10 border border-primary/20 grid place-items-center mb-4">
-                  <Icon className="h-5 w-5 text-primary" />
+                <div className="h-12 w-12 rounded-lg bg-primary/10 border border-primary/20 grid place-items-center mb-4">
+                  <Icon3D name={t.icon} size={28} className={locked ? "opacity-60 grayscale" : ""} />
                 </div>
                 <div className="font-medium">{t.title}</div>
                 <div className="text-xs text-muted-foreground mt-1">{t.subtitle}</div>
@@ -214,7 +214,7 @@ const Activities = () => {
             {nextTask ? (
               <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-3 rounded-lg border border-border bg-secondary/40">
                 <div className="h-10 w-10 rounded-lg bg-primary/15 border border-primary/20 grid place-items-center">
-                  <Sparkles className="h-5 w-5 text-primary" />
+                  <Icon3D name="sparkles" size={24} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-sm">{nextTask.title}</div>
