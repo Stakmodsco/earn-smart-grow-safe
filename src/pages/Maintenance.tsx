@@ -50,7 +50,7 @@ export default function Maintenance() {
             color: "#9ca3af"
           }}
         >
-            © 2026 Earn Smart Grow Safe
+            © 2026 Cheddar4u
         </div>
       </div>
     </div>
