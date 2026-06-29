@@ -24,11 +24,14 @@ import DailyCheckin from "./pages/DailyCheckin.tsx";
 import ForgotPassword from "./pages/ForgotPassword.tsx";
 import ResetPassword from "./pages/ResetPassword.tsx";
 import AccountSecurity from "./pages/AccountSecurity.tsx";
+import Maintenance from "./pages/Maintenance.tsx";
 import { SupportBot } from "@/components/SupportBot";
 import { IdleLogoutGuard } from "@/components/IdleLogoutGuard";
 import { AuthNudgeModal } from "@/components/AuthNudgeModal";
 
 const queryClient = new QueryClient();
+
+const MAINTENANCE_MODE = true;
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -36,32 +39,40 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <IdleLogoutGuard />
-        <UpgradeNagModal />
-        <AuthNudgeModal />
-        <SupportBot />
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/upgrade" element={<Upgrade />} />
-          <Route path="/payment/:level" element={<Payment />} />
-          <Route path="/withdraw" element={<Withdraw />} />
-          <Route path="/admin" element={<Admin />} />
-          <Route path="/become-admin" element={<BecomeAdmin />} />
-          <Route path="/activities" element={<Activities />} />
-          <Route path="/earnings" element={<Earnings />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/account-security" element={<AccountSecurity />} />
-          <Route path="/referrals" element={<Referrals />} />
-          <Route path="/receipts" element={<Receipts />} />
-          <Route path="/checkin-history" element={<CheckinHistory />} />
-          <Route path="/daily-checkin" element={<DailyCheckin />} />
-          <Route path="/requests" element={<Requests />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        {MAINTENANCE_MODE ? (
+          <Routes>
+            <Route path="*" element={<Maintenance />} />
+          </Routes>
+        ) : (
+          <>
+            <IdleLogoutGuard />
+            <UpgradeNagModal />
+            <AuthNudgeModal />
+            <SupportBot />
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/upgrade" element={<Upgrade />} />
+              <Route path="/payment/:level" element={<Payment />} />
+              <Route path="/withdraw" element={<Withdraw />} />
+              <Route path="/admin" element={<Admin />} />
+              <Route path="/become-admin" element={<BecomeAdmin />} />
+              <Route path="/activities" element={<Activities />} />
+              <Route path="/earnings" element={<Earnings />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/account-security" element={<AccountSecurity />} />
+              <Route path="/referrals" element={<Referrals />} />
+              <Route path="/receipts" element={<Receipts />} />
+              <Route path="/checkin-history" element={<CheckinHistory />} />
+              <Route path="/daily-checkin" element={<DailyCheckin />} />
+              <Route path="/requests" element={<Requests />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </>
+        )}
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
