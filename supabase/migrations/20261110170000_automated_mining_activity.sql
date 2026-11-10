@@ -187,6 +187,33 @@ begin
 end;
 $$;
 revoke all on function app_private.qualify_referral_after_activation() from public, anon, authenticated;
+
+drop trigger if exists trg_mining_activation_qualified on public.mining_activations;
+create trigger trg_mining_activation_qualified
+after insert or update of status on public.mining_activations
+for each row execute function app_private.qualify_referral_after_activation();
+
+create or replace function app_private.pause_expired_mining()
+returns integer
+language plpgsql
+security definer
+set search_path = public, app_private
+as $
+declare
+  v_paused integer;
+begin
+  update public.mining_activity
+     set status = 'paused',
+         paused_at = coalesce(paused_at, eligible_until),
+         updated_at = now()
+   where status = 'active'
+     and eligible_until is not null
+     and eligible_until <= now();
+
+  get diagnostics v_paused = row_count;
+  return v_paused;
+end;
+$;
 revoke all on function app_private.pause_expired_mining() from public, anon, authenticated;
 
 -- The signup trigger no longer credits the retired $20 welcome bonus.
@@ -308,9 +335,15 @@ declare
   v_remaining_usd numeric(28,8);
   v_take_usd numeric(28,8);
   v_coins numeric(28,12);
+  v_reward_id uuid;
   v_processed integer := 0;
   v_now timestamptz := now();
 begin
+  -- Prevent overlapping reward cycles from consuming the same funding twice.
+  if not pg_try_advisory_xact_lock(hashtextextended('process_mining_reward_cycle', 0)) then
+    return 0;
+  end if;
+
   select * into v_config
     from public.mining_bot_config
    where singleton = true;
@@ -398,17 +431,12 @@ begin
         from public.mining_reward_funding
        where status = 'confirmed' and available_usd > 0
        order by realized_at, id
-       for update skip locked
+       for update
     loop
       exit when v_remaining_usd <= 0;
       v_take_usd := least(v_funding.available_usd, v_remaining_usd);
       if v_take_usd <= 0 then continue; end if;
       v_coins := v_take_usd / v_config.reward_coin_price_usd;
-
-      update public.mining_reward_funding
-         set available_usd = available_usd - v_take_usd,
-             status = case when available_usd - v_take_usd <= 0 then 'exhausted' else 'confirmed' end
-       where id = v_funding.id;
 
       insert into public.mining_rewards (
         user_id, asset_symbol, amount, funding_id, idempotency_key,
@@ -423,9 +451,17 @@ begin
         v_work.applied_multiplier,
         v_config.base_coins_per_hour
       )
-      on conflict (idempotency_key) do nothing;
+      on conflict (idempotency_key) do nothing
+      returning id into v_reward_id;
 
-      v_remaining_usd := v_remaining_usd - v_take_usd;
+      -- Never consume proceeds unless the matching reward row was inserted.
+      if v_reward_id is not null then
+        update public.mining_reward_funding
+           set available_usd = available_usd - v_take_usd,
+               status = case when available_usd - v_take_usd <= 0 then 'exhausted' else 'confirmed' end
+         where id = v_funding.id;
+        v_remaining_usd := v_remaining_usd - v_take_usd;
+      end if;
     end loop;
 
     update public.mining_activity
