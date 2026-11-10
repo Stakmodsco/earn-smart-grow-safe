@@ -125,6 +125,7 @@ export type Database = {
         Insert: {
           eligible_until?: string | null
           last_sign_in_at?: string | null
+          last_rewarded_at?: string | null
           paused_at?: string | null
           status?: string
           updated_at?: string
