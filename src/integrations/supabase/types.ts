@@ -445,6 +445,42 @@ export type Database = {
         }
         Relationships: []
       }
+      trading_capital_accounts: {
+        Row: {
+          available_capital_usd: number
+          created_at: string
+          deployed_capital_usd: number
+          fees_usd: number
+          initial_capital_usd: number
+          realized_pnl_usd: number
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          available_capital_usd?: number
+          created_at?: string
+          deployed_capital_usd?: number
+          fees_usd?: number
+          initial_capital_usd?: number
+          realized_pnl_usd?: number
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          available_capital_usd?: number
+          created_at?: string
+          deployed_capital_usd?: number
+          fees_usd?: number
+          initial_capital_usd?: number
+          realized_pnl_usd?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           amount: number
