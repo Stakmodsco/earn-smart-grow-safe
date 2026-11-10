@@ -37,12 +37,16 @@ Deno.serve(async (req) => {
           status: "confirmed",
           payment_reference: paymentReference,
           verified_at: new Date().toISOString(),
+          reviewed_by: user.id,
+          reviewed_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }
       : {
           status: "rejected",
           payment_reference: null,
           verified_at: null,
+          reviewed_by: user.id,
+          reviewed_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
 
