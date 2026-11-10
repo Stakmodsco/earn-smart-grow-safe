@@ -12,6 +12,8 @@ create table if not exists public.mining_activations (
   payment_country text,
   payment_notes text,
   verified_at timestamptz,
+  reviewed_by uuid references auth.users(id),
+  reviewed_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   check ((status <> 'confirmed') or (payment_reference is not null and verified_at is not null))
@@ -480,3 +482,25 @@ grant all on public.mining_activations,
   public.trading_capital_accounts,
   public.trading_capital_ledger
 to service_role;
+
+create or replace function app_private.reject_ledger_mutation()
+returns trigger
+language plpgsql
+set search_path = public, app_private
+as $$
+begin
+  raise exception 'financial ledger records are append-only; post a reversal instead';
+end;
+$$;
+revoke all on function app_private.reject_ledger_mutation() from public, anon, authenticated;
+
+drop trigger if exists trg_mining_rewards_append_only on public.mining_rewards;
+create trigger trg_mining_rewards_append_only
+before update or delete on public.mining_rewards
+for each row execute function app_private.reject_ledger_mutation();
+
+drop trigger if exists trg_trading_capital_ledger_append_only on public.trading_capital_ledger;
+create trigger trg_trading_capital_ledger_append_only
+before update or delete on public.trading_capital_ledger
+for each row execute function app_private.reject_ledger_mutation();
+
