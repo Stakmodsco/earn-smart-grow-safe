@@ -23,6 +23,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { Icon3D, Icon3DName } from "@/components/Icon3D";
+import { getMiningActivityLabel, getMiningSpeedMultiplier } from "@/lib/mining";
 
 type Settings = {
   daily_earning_caps: Record<string, number>;
@@ -40,6 +41,36 @@ const Dashboard = () => {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [showBalance, setShowBalance] = useState(true);
   const [streak, setStreak] = useState(0);
+  const [clock, setClock] = useState(Date.now());
+  const [mining, setMining] = useState<{
+    activated: boolean;
+    eligibleUntil: string | null;
+    qualifiedReferrals: number;
+    balances: { asset_symbol: string; balance: number }[];
+  } | null>(null);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setClock(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const [activity, activation, referrals, balances] = await Promise.all([
+        supabase.from("mining_activity").select("eligible_until").eq("user_id", user.id).maybeSingle(),
+        supabase.from("mining_activations").select("status").eq("user_id", user.id).maybeSingle(),
+        supabase.from("referral_qualifications").select("id", { count: "exact", head: true }).eq("referrer_id", user.id),
+        supabase.from("mining_reward_balances").select("asset_symbol,balance").eq("user_id", user.id),
+      ]);
+      setMining({
+        activated: activation.data?.status === "confirmed",
+        eligibleUntil: activity.data?.eligible_until ?? null,
+        qualifiedReferrals: referrals.count ?? 0,
+        balances: balances.data ?? [],
+      });
+    })();
+  }, [user]);
 
   useEffect(() => {
     supabase.from("app_settings").select("*").then(({ data }) => {
@@ -143,6 +174,47 @@ const Dashboard = () => {
             <HeroLink to="/earnings" icon={Banknote} label="Earnings" />
             <HeroLink to="/profile" icon={Headphones} label="Support" />
           </div>
+        </Card>
+
+        {/* Automated mining */}
+        <Card className="glass-card p-5 rounded-xl mb-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-xs uppercase tracking-widest text-primary mb-1">Automated mining</div>
+              <h2 className="font-display text-xl font-semibold">
+                {mining?.balances.length
+                  ? mining.balances.map((item) => Number(item.balance).toLocaleString(undefined, { maximumFractionDigits: 8 }) + " " + item.asset_symbol).join(" · ")
+                  : "0 mined coins"}
+              </h2>
+              <p className="text-xs text-muted-foreground mt-1">Your bot-managed reward balance</p>
+            </div>
+            <span className={mining && getMiningActivityLabel(mining.activated, mining.eligibleUntil, clock) === "active"
+              ? "text-xs font-semibold px-3 py-1 rounded-full border border-primary/40 bg-primary/10 text-primary"
+              : "text-xs font-semibold px-3 py-1 rounded-full border border-warning/40 bg-warning/10 text-warning"}>
+              {mining?.activated
+                ? getMiningActivityLabel(true, mining.eligibleUntil, clock) === "active" ? "Mining active" : "Mining paused"
+                : "Activator required"}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-3 mt-5">
+            <div className="rounded-lg bg-secondary/40 p-3">
+              <div className="text-xs text-muted-foreground">Mining speed</div>
+              <div className="font-semibold text-lg">{getMiningSpeedMultiplier(mining?.qualifiedReferrals ?? 0)}×</div>
+            </div>
+            <div className="rounded-lg bg-secondary/40 p-3">
+              <div className="text-xs text-muted-foreground">Qualified referrals</div>
+              <div className="font-semibold text-lg">{mining?.qualifiedReferrals ?? 0}</div>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground mt-3">
+            Sign in at least once every 24 hours to keep mining eligible.
+            {mining?.eligibleUntil ? " Current eligibility ends " + new Date(mining.eligibleUntil).toLocaleString() + "." : ""}
+          </p>
+          {!mining?.activated && (
+            <Button asChild variant="outline" size="sm" className="mt-3">
+              <Link to="/upgrade">View Mining Activator</Link>
+            </Button>
+          )}
         </Card>
 
         {/* Stats row */}
