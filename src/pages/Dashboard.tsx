@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { Icon3D, Icon3DName } from "@/components/Icon3D";
 import { getMiningActivityLabel, getMiningSpeedMultiplier } from "@/lib/mining";
+import { SIMULATED_BASE_COINS_PER_HOUR } from "@/lib/mining-simulation";
 
 type Settings = {
   daily_earning_caps: Record<string, number>;
@@ -206,7 +207,7 @@ const Dashboard = () => {
                 ? "Activator required"
                 : getMiningActivityLabel(true, mining.eligibleUntil, clock) !== "active"
                   ? "Mining paused"
-                  : mining.botEnabled ? "Mining active" : "Mining initializing"}
+                  : mining.botEnabled ? "Simulation active" : "Simulation initializing"}
             </span>
           </div>
           <div className="grid grid-cols-2 gap-3 mt-5">
@@ -220,6 +221,9 @@ const Dashboard = () => {
             </div>
           </div>
           <p className="text-xs text-muted-foreground mt-3">
+            Base rate: {SIMULATED_BASE_COINS_PER_HOUR.toFixed(2)} MINE/hour · Current pace: {(SIMULATED_BASE_COINS_PER_HOUR * 24 * getMiningSpeedMultiplier(mining?.qualifiedReferrals ?? 0)).toFixed(2)} MINE/day.
+          </p>
+          <p className="text-xs text-muted-foreground mt-2">
             Simulated mining accrues automatically while your activation and 24-hour sign-in window are valid.
             {mining?.eligibleUntil ? " Current eligibility ends " + new Date(mining.eligibleUntil).toLocaleString() + "." : ""}
             {mining?.activated && !mining.botEnabled ? " The simulated mining engine is initializing." : ""}
