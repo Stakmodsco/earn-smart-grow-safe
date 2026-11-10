@@ -78,6 +78,8 @@ export type Database = {
           payment_notes: string | null
           payment_reference: string | null
           proof_path: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
           status: string
           updated_at: string
           user_id: string
@@ -92,6 +94,8 @@ export type Database = {
           payment_notes?: string | null
           payment_reference?: string | null
           proof_path?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           status?: string
           updated_at?: string
           user_id: string
@@ -106,6 +110,8 @@ export type Database = {
           payment_notes?: string | null
           payment_reference?: string | null
           proof_path?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           status?: string
           updated_at?: string
           user_id?: string
