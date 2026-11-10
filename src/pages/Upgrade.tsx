@@ -113,7 +113,7 @@ const Upgrade = () => {
             <li>• If 24 hours pass without another sign-in, mining pauses automatically.</li>
             <li>• Signing in again resumes eligibility; paused time is never credited retroactively.</li>
             <li>• Qualified referrals increase mining speed only. They do not earn direct coin bonuses.</li>
-            <li>• Rewards are limited by realized trading proceeds actually available for distribution.</li>
+            <li>• Coin credits are added automatically when the reward cycle processes eligible mining time.</li>
           </ul>
         </Card>
       </div>
