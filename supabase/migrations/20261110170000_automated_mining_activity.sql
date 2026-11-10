@@ -279,8 +279,8 @@ insert into public.mining_bot_config(singleton, enabled)
 values (true, false)
 on conflict (singleton) do nothing;
 alter table public.mining_bot_config enable row level security;
-create policy "admins read mining bot config" on public.mining_bot_config
-  for select to authenticated using (public.is_admin(auth.uid()));
+create policy "authenticated read mining bot status" on public.mining_bot_config
+  for select to authenticated using (true);
 
 -- Atomic server-side reward worker. It can only credit coins against confirmed
 -- realized trading proceeds and is a no-op until a valid bot configuration exists.
@@ -465,6 +465,7 @@ $$;
 -- RLS; all writes to these financial tables remain server-side.
 grant select on public.mining_activations,
   public.mining_activity,
+  public.mining_bot_config,
   public.referral_qualifications,
   public.mining_speed_tiers,
   public.mining_rewards,
