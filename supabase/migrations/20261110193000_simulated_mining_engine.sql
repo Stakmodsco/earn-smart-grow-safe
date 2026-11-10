@@ -34,6 +34,7 @@ on conflict (singleton) do update
   set enabled = true,
       reward_asset_symbol = 'MINE',
       base_coins_per_hour = 0.05,
+      reward_coin_price_usd = 0.01,
       updated_at = now();
 
 create or replace function app_private.process_mining_reward_cycle()
