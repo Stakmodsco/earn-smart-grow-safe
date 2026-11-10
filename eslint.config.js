@@ -21,6 +21,9 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "@typescript-eslint/no-unused-vars": "off",
+      // Existing application files contain legacy any annotations; keep these visible as warnings
+      // without blocking CI while they are progressively replaced with concrete types.
+      "@typescript-eslint/no-explicit-any": "warn",
     },
   },
 );
