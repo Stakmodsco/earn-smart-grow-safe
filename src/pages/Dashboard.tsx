@@ -44,6 +44,7 @@ const Dashboard = () => {
   const [clock, setClock] = useState(Date.now());
   const [mining, setMining] = useState<{
     activated: boolean;
+    botEnabled: boolean;
     eligibleUntil: string | null;
     qualifiedReferrals: number;
     balances: { asset_symbol: string; balance: number }[];
@@ -58,15 +59,17 @@ const Dashboard = () => {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const [activity, activation, referrals, balances, capital] = await Promise.all([
+      const [activity, activation, referrals, balances, capital, botConfig] = await Promise.all([
         supabase.from("mining_activity").select("eligible_until").eq("user_id", user.id).maybeSingle(),
         supabase.from("mining_activations").select("status").eq("user_id", user.id).maybeSingle(),
         supabase.from("referral_qualifications").select("id", { count: "exact", head: true }).eq("referrer_id", user.id),
         supabase.from("mining_reward_balances").select("asset_symbol,balance").eq("user_id", user.id),
         supabase.from("trading_capital_accounts").select("initial_capital_usd,available_capital_usd,deployed_capital_usd,realized_pnl_usd,fees_usd").eq("user_id", user.id).maybeSingle(),
+        supabase.from("mining_bot_config").select("enabled").eq("singleton", true).maybeSingle(),
       ]);
       setMining({
         activated: activation.data?.status === "confirmed",
+        botEnabled: botConfig.data?.enabled === true,
         eligibleUntil: activity.data?.eligible_until ?? null,
         qualifiedReferrals: referrals.count ?? 0,
         balances: balances.data ?? [],
@@ -191,12 +194,14 @@ const Dashboard = () => {
               </h2>
               <p className="text-xs text-muted-foreground mt-1">Your bot-managed reward balance</p>
             </div>
-            <span className={mining && getMiningActivityLabel(mining.activated, mining.eligibleUntil, clock) === "active"
+            <span className={mining?.activated && mining.botEnabled && getMiningActivityLabel(true, mining.eligibleUntil, clock) === "active"
               ? "text-xs font-semibold px-3 py-1 rounded-full border border-primary/40 bg-primary/10 text-primary"
               : "text-xs font-semibold px-3 py-1 rounded-full border border-warning/40 bg-warning/10 text-warning"}>
-              {mining?.activated
-                ? getMiningActivityLabel(true, mining.eligibleUntil, clock) === "active" ? "Mining active" : "Mining paused"
-                : "Activator required"}
+              {!mining?.activated
+                ? "Activator required"
+                : getMiningActivityLabel(true, mining.eligibleUntil, clock) !== "active"
+                  ? "Mining paused"
+                  : mining.botEnabled ? "Mining active" : "Bot setup pending"}
             </span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-5">
@@ -217,6 +222,7 @@ const Dashboard = () => {
           <p className="text-xs text-muted-foreground mt-3">
             Sign in at least once every 24 hours to keep mining eligible.
             {mining?.eligibleUntil ? " Current eligibility ends " + new Date(mining.eligibleUntil).toLocaleString() + "." : ""}
+            {mining?.activated && !mining.botEnabled ? " Reward processing is waiting for the trading bot and proceeds configuration." : ""}
           </p>
           {!mining?.activated && (
             <Button asChild variant="outline" size="sm" className="mt-3">
