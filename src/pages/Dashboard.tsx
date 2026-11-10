@@ -230,7 +230,7 @@ const Dashboard = () => {
           <Button asChild variant="outline" size="lg" className="h-20 flex-col gap-2 hover:border-primary/50">
             <Link to="/upgrade">
               <ArrowUpRight className="h-5 w-5 text-primary" />
-              <span>Upgrade</span>
+              <span>Mining Activator</span>
             </Link>
           </Button>
           <Button asChild variant="outline" size="lg" className="h-20 flex-col gap-2 hover:border-primary/50">
@@ -271,8 +271,8 @@ const Dashboard = () => {
               <Users className="h-6 w-6 text-primary" />
             </div>
             <div className="flex-1">
-              <div className="font-display text-lg font-semibold">Refer & Earn</div>
-              <div className="text-sm text-muted-foreground">Invite friends and earn bonuses when they upgrade.</div>
+              <div className="font-display text-lg font-semibold">Grow your mining speed</div>
+              <div className="text-sm text-muted-foreground">Qualified referrals increase your mining multiplier. No direct referral coin bonuses.</div>
             </div>
             <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
           </Card>
