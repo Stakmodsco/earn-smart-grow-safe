@@ -230,7 +230,16 @@ const Auth = () => {
 
         if (error) throw error;
 
-        toast.success("Signed in");
+        const { data: miningActivity, error: miningActivityError } =
+          await supabase.functions.invoke("record-mining-signin", { body: {} });
+
+        if (miningActivityError || miningActivity?.error) {
+          toast.warning("Signed in, but mining activity could not be refreshed. Please contact support if this continues.");
+        } else if (miningActivity?.activation_required) {
+          toast.success("Signed in. Complete your Mining Activator to start automated mining.");
+        } else {
+          toast.success("Signed in. Your mining activity is active for the next 24 hours.");
+        }
       }
     } catch (e: any) {
       toast.error(e.message ?? "Something went wrong");
@@ -252,10 +261,8 @@ const Auth = () => {
 
             <p className="text-muted-foreground text-sm mt-1">
               {mode === "signup"
-                ? `Get a ${format(
-                    20
-                  )} welcome bonus added to your balance instantly.`
-                : "Sign in to your Cheddar4u dashboard."}
+                ? "Create your account, then activate automated mining with the $5 Mining Activator."
+                : "Sign in daily to keep your automated mining active."}
             </p>
           </div>
 
