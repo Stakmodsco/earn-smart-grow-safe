@@ -268,7 +268,7 @@ revoke all on function app_private.handle_new_user() from public, anon, authenti
 create extension if not exists pg_cron with schema pg_catalog;
 grant usage on schema cron to postgres;
 grant all privileges on all tables in schema cron to postgres;
-do $
+do $cron$
 begin
   if exists (select 1 from pg_extension where extname = 'pg_cron') then
     begin
@@ -283,7 +283,7 @@ begin
     );
   end if;
 end;
-$$;
+$cron$;
 
 
 -- Bot configuration is deliberately disabled until the reward asset, rate and
