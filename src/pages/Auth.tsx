@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { PasswordInput } from "@/components/PasswordInput";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useCurrency } from "@/hooks/useCurrency";
 import { toast } from "sonner";
 import { CheckCircle2, Circle, ShieldCheck } from "lucide-react";
 import {
@@ -57,7 +56,6 @@ const Auth = () => {
 
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { format } = useCurrency();
 
   useEffect(() => {
     if (user) navigate("/dashboard");
