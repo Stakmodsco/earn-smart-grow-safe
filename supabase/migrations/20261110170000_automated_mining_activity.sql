@@ -321,12 +321,7 @@ begin
       from public.referral_qualifications
      where referrer_id = v_activity.user_id;
 
-    select multiplier into v_multiplier
-      from public.mining_speed_tiers
-     where minimum_qualified_referrals <= v_referrals
-     order by minimum_qualified_referrals desc
-     limit 1;
-    v_multiplier := coalesce(v_multiplier, 1);
+    v_multiplier := greatest(1, floor(v_referrals::numeric / 10) + 1);
 
     v_requested_coins :=
       v_config.base_coins_per_hour * (v_seconds::numeric / 3600) * v_multiplier;
