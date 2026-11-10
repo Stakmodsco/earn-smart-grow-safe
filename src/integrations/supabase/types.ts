@@ -68,6 +68,33 @@ export type Database = {
         }
         Relationships: []
       }
+      mining_bot_config: {
+        Row: {
+          base_coins_per_hour: number
+          enabled: boolean
+          reward_asset_symbol: string | null
+          reward_coin_price_usd: number
+          singleton: boolean
+          updated_at: string
+        }
+        Insert: {
+          base_coins_per_hour?: number
+          enabled?: boolean
+          reward_asset_symbol?: string | null
+          reward_coin_price_usd?: number
+          singleton?: boolean
+          updated_at?: string
+        }
+        Update: {
+          base_coins_per_hour?: number
+          enabled?: boolean
+          reward_asset_symbol?: string | null
+          reward_coin_price_usd?: number
+          singleton?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       mining_activations: {
         Row: {
           amount_usd: number
