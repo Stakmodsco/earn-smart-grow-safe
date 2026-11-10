@@ -47,6 +47,7 @@ const Dashboard = () => {
     eligibleUntil: string | null;
     qualifiedReferrals: number;
     balances: { asset_symbol: string; balance: number }[];
+    capital: { initial_capital_usd: number; available_capital_usd: number; deployed_capital_usd: number; realized_pnl_usd: number; fees_usd: number } | null;
   } | null>(null);
 
   useEffect(() => {
@@ -57,17 +58,19 @@ const Dashboard = () => {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const [activity, activation, referrals, balances] = await Promise.all([
+      const [activity, activation, referrals, balances, capital] = await Promise.all([
         supabase.from("mining_activity").select("eligible_until").eq("user_id", user.id).maybeSingle(),
         supabase.from("mining_activations").select("status").eq("user_id", user.id).maybeSingle(),
         supabase.from("referral_qualifications").select("id", { count: "exact", head: true }).eq("referrer_id", user.id),
         supabase.from("mining_reward_balances").select("asset_symbol,balance").eq("user_id", user.id),
+        supabase.from("trading_capital_accounts").select("initial_capital_usd,available_capital_usd,deployed_capital_usd,realized_pnl_usd,fees_usd").eq("user_id", user.id).maybeSingle(),
       ]);
       setMining({
         activated: activation.data?.status === "confirmed",
         eligibleUntil: activity.data?.eligible_until ?? null,
         qualifiedReferrals: referrals.count ?? 0,
         balances: balances.data ?? [],
+        capital: capital.data,
       });
     })();
   }, [user]);
@@ -196,7 +199,7 @@ const Dashboard = () => {
                 : "Activator required"}
             </span>
           </div>
-          <div className="grid grid-cols-2 gap-3 mt-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-5">
             <div className="rounded-lg bg-secondary/40 p-3">
               <div className="text-xs text-muted-foreground">Mining speed</div>
               <div className="font-semibold text-lg">{getMiningSpeedMultiplier(mining?.qualifiedReferrals ?? 0)}×</div>
@@ -204,6 +207,11 @@ const Dashboard = () => {
             <div className="rounded-lg bg-secondary/40 p-3">
               <div className="text-xs text-muted-foreground">Qualified referrals</div>
               <div className="font-semibold text-lg">{mining?.qualifiedReferrals ?? 0}</div>
+            </div>
+            <div className="rounded-lg bg-secondary/40 p-3">
+              <div className="text-xs text-muted-foreground">Individual trading capital</div>
+              <div className="font-semibold text-lg">{mining?.capital ? "$" + Number(mining.capital.initial_capital_usd).toFixed(2) : "$0.00"}</div>
+              <div className="text-[11px] text-muted-foreground">Available: ${Number(mining?.capital?.available_capital_usd ?? 0).toFixed(2)}</div>
             </div>
           </div>
           <p className="text-xs text-muted-foreground mt-3">
