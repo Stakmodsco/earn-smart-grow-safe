@@ -61,6 +61,8 @@ Deno.serve(async (req) => {
       payment_country: country,
       payment_notes: notes,
       verified_at: null,
+      reviewed_by: null,
+      reviewed_at: null,
       updated_at: new Date().toISOString(),
     };
 
