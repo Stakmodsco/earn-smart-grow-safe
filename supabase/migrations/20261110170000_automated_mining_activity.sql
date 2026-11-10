@@ -38,6 +38,41 @@ create policy "users read own mining activity" on public.mining_activity
 create policy "admins read mining activity" on public.mining_activity
   for select to authenticated using (public.is_admin(auth.uid()));
 
+create table if not exists public.trading_capital_accounts (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  initial_capital_usd numeric(18,8) not null default 5 check (initial_capital_usd = 5),
+  available_capital_usd numeric(18,8) not null default 5 check (available_capital_usd >= 0),
+  deployed_capital_usd numeric(18,8) not null default 0 check (deployed_capital_usd >= 0),
+  realized_pnl_usd numeric(18,8) not null default 0,
+  fees_usd numeric(18,8) not null default 0 check (fees_usd >= 0),
+  status text not null default 'active' check (status in ('active','paused','closed')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table public.trading_capital_accounts enable row level security;
+create policy "users read own trading capital" on public.trading_capital_accounts
+  for select to authenticated using (auth.uid() = user_id);
+create policy "admins read trading capital" on public.trading_capital_accounts
+  for select to authenticated using (public.is_admin(auth.uid()));
+
+create table if not exists public.trading_capital_ledger (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  entry_type text not null check (entry_type in ('activation_credit','trade_debit','trade_release','realized_pnl','trading_fee','reversal')),
+  amount_usd numeric(18,8) not null check (amount_usd <> 0),
+  reference_id text not null,
+  idempotency_key text not null unique,
+  notes text,
+  created_at timestamptz not null default now()
+);
+create index if not exists trading_capital_ledger_user_time_idx
+  on public.trading_capital_ledger(user_id, created_at desc);
+alter table public.trading_capital_ledger enable row level security;
+create policy "users read own capital ledger" on public.trading_capital_ledger
+  for select to authenticated using (auth.uid() = user_id);
+create policy "admins read capital ledger" on public.trading_capital_ledger
+  for select to authenticated using (public.is_admin(auth.uid()));
+
 create table if not exists public.referral_qualifications (
   id uuid primary key default gen_random_uuid(),
   referrer_id uuid not null references auth.users(id) on delete cascade,
@@ -116,6 +151,20 @@ declare v_referrer uuid;
 begin
   if new.status = 'confirmed'
      and (tg_op = 'INSERT' or old.status is distinct from new.status) then
+    -- Allocate the full $5 to this user's individually tracked trading ledger.
+    insert into public.trading_capital_accounts (
+      user_id, initial_capital_usd, available_capital_usd
+    ) values (new.user_id, 5, 5)
+    on conflict (user_id) do nothing;
+
+    insert into public.trading_capital_ledger (
+      user_id, entry_type, amount_usd, reference_id, idempotency_key, notes
+    ) values (
+      new.user_id, 'activation_credit', 5, new.id::text,
+      'activation:' || new.id::text, 'Verified $5 Mining Activator allocated to individual trading capital'
+    )
+    on conflict (idempotency_key) do nothing;
+
     select referred_by into v_referrer from public.profiles where id = new.user_id;
     if v_referrer is not null and v_referrer <> new.user_id then
       insert into public.referral_qualifications(referrer_id, referred_user_id, activation_id)
@@ -133,29 +182,6 @@ begin
      where user_id = new.user_id;
   end if;
   return new;
-end;
-$$;
-drop trigger if exists trg_qualify_referral_after_activation on public.mining_activations;
-create trigger trg_qualify_referral_after_activation
-after insert or update of status on public.mining_activations
-for each row execute function app_private.qualify_referral_after_activation();
-
-create or replace function app_private.pause_expired_mining()
-returns integer
-language plpgsql
-security definer
-set search_path = public, app_private
-as $$
-declare affected integer;
-begin
-  update public.mining_activity
-     set status = 'paused',
-         paused_at = coalesce(paused_at, eligible_until, now()),
-         updated_at = now()
-   where status = 'active'
-     and eligible_until <= now();
-  get diagnostics affected = row_count;
-  return affected;
 end;
 $$;
 revoke all on function app_private.qualify_referral_after_activation() from public, anon, authenticated;
