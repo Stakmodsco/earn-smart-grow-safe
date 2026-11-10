@@ -1,6 +1,6 @@
 import { getMiningSpeedMultiplier } from "./mining";
 
-export const SIMULATED_BASE_COINS_PER_HOUR = 0.05;
+export const SIMULATED_BASE_COINS_PER_HOUR = 1.78;
 export const SIMULATED_MINING_ASSET = "MINE";
 
 /**
