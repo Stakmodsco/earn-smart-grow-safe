@@ -26,6 +26,7 @@ create table if not exists public.mining_activity (
   user_id uuid primary key references auth.users(id) on delete cascade,
   last_sign_in_at timestamptz,
   eligible_until timestamptz,
+  last_rewarded_at timestamptz,
   status text not null default 'paused' check (status in ('active','paused')),
   paused_at timestamptz,
   updated_at timestamptz not null default now(),
@@ -222,6 +223,179 @@ begin
       'pause-expired-mining',
       '*/5 * * * *',
       'select app_private.pause_expired_mining();'
+    );
+  end if;
+end;
+$$;
+
+
+-- Bot configuration is deliberately disabled until the reward asset, rate and
+-- independently reconciled trading proceeds are configured by the operator.
+create table if not exists public.mining_bot_config (
+  singleton boolean primary key default true check (singleton),
+  enabled boolean not null default false,
+  reward_asset_symbol text,
+  base_coins_per_hour numeric(28,12) not null default 0 check (base_coins_per_hour >= 0),
+  reward_coin_price_usd numeric(18,8) not null default 0 check (reward_coin_price_usd >= 0),
+  updated_at timestamptz not null default now(),
+  check (not enabled or (
+    reward_asset_symbol is not null
+    and length(trim(reward_asset_symbol)) between 1 and 16
+    and base_coins_per_hour > 0
+    and reward_coin_price_usd > 0
+  ))
+);
+insert into public.mining_bot_config(singleton, enabled)
+values (true, false)
+on conflict (singleton) do nothing;
+alter table public.mining_bot_config enable row level security;
+create policy "admins read mining bot config" on public.mining_bot_config
+  for select to authenticated using (public.is_admin(auth.uid()));
+
+-- Atomic server-side reward worker. It can only credit coins against confirmed
+-- realized trading proceeds and is a no-op until a valid bot configuration exists.
+create or replace function app_private.process_mining_reward_cycle()
+returns integer
+language plpgsql
+security definer
+set search_path = public, app_private
+as $$
+declare
+  v_config public.mining_bot_config%rowtype;
+  v_activity record;
+  v_funding record;
+  v_referrals integer;
+  v_multiplier numeric(8,2);
+  v_start timestamptz;
+  v_end timestamptz;
+  v_seconds integer;
+  v_requested_coins numeric(28,12);
+  v_remaining_usd numeric(28,8);
+  v_take_usd numeric(28,8);
+  v_coins numeric(28,12);
+  v_processed integer := 0;
+  v_now timestamptz := now();
+begin
+  select * into v_config
+    from public.mining_bot_config
+   where singleton = true;
+  if not found or not v_config.enabled
+     or v_config.base_coins_per_hour <= 0
+     or v_config.reward_coin_price_usd <= 0
+     or v_config.reward_asset_symbol is null then
+    return 0;
+  end if;
+
+  for v_activity in
+    select ma.user_id, ma.last_sign_in_at, ma.eligible_until, ma.last_rewarded_at
+      from public.mining_activity ma
+     where ma.last_sign_in_at is not null
+       and ma.eligible_until is not null
+       and (ma.last_rewarded_at is null or ma.last_rewarded_at < ma.eligible_until)
+       and exists (
+         select 1 from public.mining_activations a
+          where a.user_id = ma.user_id and a.status = 'confirmed'
+       )
+     order by ma.last_rewarded_at nulls first, ma.user_id
+     for update of ma skip locked
+  loop
+    v_start := greatest(
+      coalesce(v_activity.last_rewarded_at, v_activity.last_sign_in_at),
+      v_activity.last_sign_in_at
+    );
+    v_end := least(v_now, v_activity.eligible_until);
+    v_seconds := greatest(0, floor(extract(epoch from (v_end - v_start)))::integer);
+
+    if v_seconds <= 0 then
+      if v_activity.eligible_until <= v_now then
+        update public.mining_activity
+           set status = 'paused',
+               paused_at = coalesce(paused_at, eligible_until),
+               updated_at = v_now
+         where user_id = v_activity.user_id;
+      end if;
+      continue;
+    end if;
+
+    select count(*)::integer into v_referrals
+      from public.referral_qualifications
+     where referrer_id = v_activity.user_id;
+
+    select multiplier into v_multiplier
+      from public.mining_speed_tiers
+     where minimum_qualified_referrals <= v_referrals
+     order by minimum_qualified_referrals desc
+     limit 1;
+    v_multiplier := coalesce(v_multiplier, 1);
+
+    v_requested_coins :=
+      v_config.base_coins_per_hour * (v_seconds::numeric / 3600) * v_multiplier;
+    v_remaining_usd := v_requested_coins * v_config.reward_coin_price_usd;
+
+    for v_funding in
+      select id, available_usd
+        from public.mining_reward_funding
+       where status = 'confirmed' and available_usd > 0
+       order by realized_at, id
+       for update skip locked
+    loop
+      exit when v_remaining_usd <= 0;
+      v_take_usd := least(v_funding.available_usd, v_remaining_usd);
+      if v_take_usd <= 0 then continue; end if;
+      v_coins := v_take_usd / v_config.reward_coin_price_usd;
+
+      update public.mining_reward_funding
+         set available_usd = available_usd - v_take_usd,
+             status = case when available_usd - v_take_usd <= 0 then 'exhausted' else 'confirmed' end
+       where id = v_funding.id;
+
+      insert into public.mining_rewards (
+        user_id, asset_symbol, amount, funding_id, idempotency_key,
+        eligible_seconds, applied_multiplier, base_rate
+      ) values (
+        v_activity.user_id,
+        v_config.reward_asset_symbol,
+        v_coins,
+        v_funding.id,
+        concat(v_activity.user_id, ':', v_start, ':', v_end, ':', v_funding.id),
+        v_seconds,
+        v_multiplier,
+        v_config.base_coins_per_hour
+      )
+      on conflict (idempotency_key) do nothing;
+
+      v_remaining_usd := v_remaining_usd - v_take_usd;
+    end loop;
+
+    -- Advance the cursor even when proceeds are exhausted: unfunded time is
+    -- not banked or paid retroactively in a later cycle.
+    update public.mining_activity
+       set last_rewarded_at = v_end,
+           status = case when eligible_until <= v_now then 'paused' else 'active' end,
+           paused_at = case when eligible_until <= v_now then coalesce(paused_at, eligible_until) else null end,
+           updated_at = v_now
+     where user_id = v_activity.user_id;
+
+    v_processed := v_processed + 1;
+  end loop;
+
+  return v_processed;
+end;
+$$;
+revoke all on function app_private.process_mining_reward_cycle() from public, anon, authenticated;
+
+do $$
+begin
+  if exists (select 1 from pg_extension where extname = 'pg_cron') then
+    begin
+      perform cron.unschedule('process-automated-mining-rewards');
+    exception when others then
+      null;
+    end;
+    perform cron.schedule(
+      'process-automated-mining-rewards',
+      '*/5 * * * *',
+      'select app_private.process_mining_reward_cycle();'
     );
   end if;
 end;
