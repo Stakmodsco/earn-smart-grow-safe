@@ -40,41 +40,6 @@ create policy "users read own mining activity" on public.mining_activity
 create policy "admins read mining activity" on public.mining_activity
   for select to authenticated using (public.is_admin(auth.uid()));
 
-create table if not exists public.trading_capital_accounts (
-  user_id uuid primary key references auth.users(id) on delete cascade,
-  initial_capital_usd numeric(18,8) not null default 5 check (initial_capital_usd = 5),
-  available_capital_usd numeric(18,8) not null default 5 check (available_capital_usd >= 0),
-  deployed_capital_usd numeric(18,8) not null default 0 check (deployed_capital_usd >= 0),
-  realized_pnl_usd numeric(18,8) not null default 0,
-  fees_usd numeric(18,8) not null default 0 check (fees_usd >= 0),
-  status text not null default 'active' check (status in ('active','paused','closed')),
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-alter table public.trading_capital_accounts enable row level security;
-create policy "users read own trading capital" on public.trading_capital_accounts
-  for select to authenticated using (auth.uid() = user_id);
-create policy "admins read trading capital" on public.trading_capital_accounts
-  for select to authenticated using (public.is_admin(auth.uid()));
-
-create table if not exists public.trading_capital_ledger (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
-  entry_type text not null check (entry_type in ('activation_credit','trade_debit','trade_release','realized_pnl','trading_fee','reversal')),
-  amount_usd numeric(18,8) not null check (amount_usd <> 0),
-  reference_id text not null,
-  idempotency_key text not null unique,
-  notes text,
-  created_at timestamptz not null default now()
-);
-create index if not exists trading_capital_ledger_user_time_idx
-  on public.trading_capital_ledger(user_id, created_at desc);
-alter table public.trading_capital_ledger enable row level security;
-create policy "users read own capital ledger" on public.trading_capital_ledger
-  for select to authenticated using (auth.uid() = user_id);
-create policy "admins read capital ledger" on public.trading_capital_ledger
-  for select to authenticated using (public.is_admin(auth.uid()));
-
 create table if not exists public.referral_qualifications (
   id uuid primary key default gen_random_uuid(),
   referrer_id uuid not null references auth.users(id) on delete cascade,
@@ -493,9 +458,7 @@ grant select on public.mining_activations,
   public.mining_bot_config,
   public.referral_qualifications,
   public.mining_speed_tiers,
-  public.mining_rewards,
-  public.trading_capital_accounts,
-  public.trading_capital_ledger
+  public.mining_rewards
 to authenticated;
 
 grant all on public.mining_activations,
@@ -504,9 +467,7 @@ grant all on public.mining_activations,
   public.mining_speed_tiers,
   public.mining_reward_funding,
   public.mining_rewards,
-  public.mining_bot_config,
-  public.trading_capital_accounts,
-  public.trading_capital_ledger
+  public.mining_bot_config
 to service_role;
 
 create or replace function app_private.reject_ledger_mutation()
@@ -524,9 +485,3 @@ drop trigger if exists trg_mining_rewards_append_only on public.mining_rewards;
 create trigger trg_mining_rewards_append_only
 before update or delete on public.mining_rewards
 for each row execute function app_private.reject_ledger_mutation();
-
-drop trigger if exists trg_trading_capital_ledger_append_only on public.trading_capital_ledger;
-create trigger trg_trading_capital_ledger_append_only
-before update or delete on public.trading_capital_ledger
-for each row execute function app_private.reject_ledger_mutation();
-
