@@ -457,3 +457,26 @@ begin
   end if;
 end;
 $$;
+
+
+-- Explicit Data API grants: authenticated users can read only rows allowed by
+-- RLS; all writes to these financial tables remain server-side.
+grant select on public.mining_activations,
+  public.mining_activity,
+  public.referral_qualifications,
+  public.mining_speed_tiers,
+  public.mining_rewards,
+  public.trading_capital_accounts,
+  public.trading_capital_ledger
+to authenticated;
+
+grant all on public.mining_activations,
+  public.mining_activity,
+  public.referral_qualifications,
+  public.mining_speed_tiers,
+  public.mining_reward_funding,
+  public.mining_rewards,
+  public.mining_bot_config,
+  public.trading_capital_accounts,
+  public.trading_capital_ledger
+to service_role;
