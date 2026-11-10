@@ -57,7 +57,8 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (!user) return;
-    (async () => {
+    let mounted = true;
+    const loadMining = async () => {
       const [activity, activation, referrals, balances, botConfig] = await Promise.all([
         supabase.from("mining_activity").select("eligible_until").eq("user_id", user.id).maybeSingle(),
         supabase.from("mining_activations").select("status").eq("user_id", user.id).maybeSingle(),
@@ -65,6 +66,7 @@ const Dashboard = () => {
         supabase.from("mining_reward_balances").select("asset_symbol,balance").eq("user_id", user.id),
         supabase.from("mining_bot_config").select("enabled").eq("singleton", true).maybeSingle(),
       ]);
+      if (!mounted) return;
       setMining({
         activated: activation.data?.status === "confirmed",
         botEnabled: botConfig.data?.enabled === true,
@@ -72,7 +74,13 @@ const Dashboard = () => {
         qualifiedReferrals: referrals.count ?? 0,
         balances: balances.data ?? [],
       });
-    })();
+    };
+    void loadMining();
+    const refresh = window.setInterval(() => void loadMining(), 30_000);
+    return () => {
+      mounted = false;
+      window.clearInterval(refresh);
+    };
   }, [user]);
 
   useEffect(() => {
@@ -183,13 +191,13 @@ const Dashboard = () => {
         <Card className="glass-card p-5 rounded-xl mb-5">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="text-xs uppercase tracking-widest text-primary mb-1">Automated mining</div>
+              <div className="text-xs uppercase tracking-widest text-primary mb-1">Simulated mining</div>
               <h2 className="font-display text-xl font-semibold">
                 {mining?.balances.length
                   ? mining.balances.map((item) => Number(item.balance).toLocaleString(undefined, { maximumFractionDigits: 8 }) + " " + item.asset_symbol).join(" · ")
-                  : "0 mined coins"}
+                  : "0.00000000 MINE"}
               </h2>
-              <p className="text-xs text-muted-foreground mt-1">Your bot-managed reward balance</p>
+              <p className="text-xs text-muted-foreground mt-1">Your simulated coin balance</p>
             </div>
             <span className={mining?.activated && mining.botEnabled && getMiningActivityLabel(true, mining.eligibleUntil, clock) === "active"
               ? "text-xs font-semibold px-3 py-1 rounded-full border border-primary/40 bg-primary/10 text-primary"
@@ -212,9 +220,9 @@ const Dashboard = () => {
             </div>
           </div>
           <p className="text-xs text-muted-foreground mt-3">
-            Sign in at least once every 24 hours to keep mining eligible.
+            Simulated mining accrues automatically while your activation and 24-hour sign-in window are valid.
             {mining?.eligibleUntil ? " Current eligibility ends " + new Date(mining.eligibleUntil).toLocaleString() + "." : ""}
-            {mining?.activated && !mining.botEnabled ? " Mining rewards are being prepared." : ""}
+            {mining?.activated && !mining.botEnabled ? " The simulated mining engine is initializing." : ""}
           </p>
           {!mining?.activated && (
             <Button asChild variant="outline" size="sm" className="mt-3">
