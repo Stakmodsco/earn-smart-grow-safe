@@ -437,6 +437,7 @@ begin
       v_take_usd := least(v_funding.available_usd, v_remaining_usd);
       if v_take_usd <= 0 then continue; end if;
       v_coins := v_take_usd / v_config.reward_coin_price_usd;
+      v_reward_id := null;
 
       insert into public.mining_rewards (
         user_id, asset_symbol, amount, funding_id, idempotency_key,
