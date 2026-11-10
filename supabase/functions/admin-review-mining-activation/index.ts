@@ -46,12 +46,15 @@ Deno.serve(async (req) => {
           updated_at: new Date().toISOString(),
         };
 
-    const { error: updateError } = await svc
+    const { data: updated, error: updateError } = await svc
       .from("mining_activations")
       .update(update)
       .eq("id", activationId)
-      .eq("status", "pending");
+      .eq("status", "pending")
+      .select("id")
+      .maybeSingle();
     if (updateError) throw updateError;
+    if (!updated) return json({ error: "activation_already_reviewed" }, 409);
 
     return json({ ok: true, status: update.status, user_id: activation.user_id });
   } catch (error) {
