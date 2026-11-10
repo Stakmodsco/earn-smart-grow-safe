@@ -153,19 +153,7 @@ declare v_referrer uuid;
 begin
   if new.status = 'confirmed'
      and (tg_op = 'INSERT' or old.status is distinct from new.status) then
-    -- Allocate the full $5 to this user's individually tracked trading ledger.
-    insert into public.trading_capital_accounts (
-      user_id, initial_capital_usd, available_capital_usd
-    ) values (new.user_id, 5, 5)
-    on conflict (user_id) do nothing;
-
-    insert into public.trading_capital_ledger (
-      user_id, entry_type, amount_usd, reference_id, idempotency_key, notes
-    ) values (
-      new.user_id, 'activation_credit', 5, new.id::text,
-      'activation:' || new.id::text, 'Verified $5 Mining Activator allocated to individual trading capital'
-    )
-    on conflict (idempotency_key) do nothing;
+    -- Activation is an access payment; investment capital is managed centrally by the operator.
 
     select referred_by into v_referrer from public.profiles where id = new.user_id;
     if v_referrer is not null and v_referrer <> new.user_id then
