@@ -186,7 +186,7 @@ returns integer
 language plpgsql
 security definer
 set search_path = public, app_private
-as $
+as $$
 declare
   v_paused integer;
 begin
@@ -201,7 +201,7 @@ begin
   get diagnostics v_paused = row_count;
   return v_paused;
 end;
-$;
+$$;
 revoke all on function app_private.pause_expired_mining() from public, anon, authenticated;
 
 -- The signup trigger no longer credits the retired $20 welcome bonus.
