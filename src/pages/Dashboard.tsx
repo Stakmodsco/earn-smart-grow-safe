@@ -23,6 +23,8 @@ import {
   Wallet,
 } from "lucide-react";
 import { Icon3D, Icon3DName } from "@/components/Icon3D";
+import { getMiningActivityLabel, getMiningSpeedMultiplier } from "@/lib/mining";
+import { SIMULATED_BASE_COINS_PER_HOUR } from "@/lib/mining-simulation";
 
 type Settings = {
   daily_earning_caps: Record<string, number>;
@@ -40,6 +42,47 @@ const Dashboard = () => {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [showBalance, setShowBalance] = useState(true);
   const [streak, setStreak] = useState(0);
+  const [clock, setClock] = useState(Date.now());
+  const [mining, setMining] = useState<{
+    activated: boolean;
+    botEnabled: boolean;
+    eligibleUntil: string | null;
+    qualifiedReferrals: number;
+    balances: { asset_symbol: string; balance: number }[];
+  } | null>(null);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setClock(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    let mounted = true;
+    const loadMining = async () => {
+      const [activity, activation, referrals, balances, botConfig] = await Promise.all([
+        supabase.from("mining_activity").select("eligible_until").eq("user_id", user.id).maybeSingle(),
+        supabase.from("mining_activations").select("status").eq("user_id", user.id).maybeSingle(),
+        supabase.from("referral_qualifications").select("id", { count: "exact", head: true }).eq("referrer_id", user.id),
+        supabase.from("mining_reward_balances").select("asset_symbol,balance").eq("user_id", user.id),
+        supabase.from("mining_bot_config").select("enabled").eq("singleton", true).maybeSingle(),
+      ]);
+      if (!mounted) return;
+      setMining({
+        activated: activation.data?.status === "confirmed",
+        botEnabled: botConfig.data?.enabled === true,
+        eligibleUntil: activity.data?.eligible_until ?? null,
+        qualifiedReferrals: referrals.count ?? 0,
+        balances: balances.data ?? [],
+      });
+    };
+    void loadMining();
+    const refresh = window.setInterval(() => void loadMining(), 30_000);
+    return () => {
+      mounted = false;
+      window.clearInterval(refresh);
+    };
+  }, [user]);
 
   useEffect(() => {
     supabase.from("app_settings").select("*").then(({ data }) => {
@@ -145,6 +188,53 @@ const Dashboard = () => {
           </div>
         </Card>
 
+        {/* Automated mining */}
+        <Card className="glass-card p-5 rounded-xl mb-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-xs uppercase tracking-widest text-primary mb-1">Simulated mining</div>
+              <h2 className="font-display text-xl font-semibold">
+                {mining?.balances.length
+                  ? mining.balances.map((item) => Number(item.balance).toLocaleString(undefined, { maximumFractionDigits: 8 }) + " " + item.asset_symbol).join(" · ")
+                  : "0.00000000 MINE"}
+              </h2>
+              <p className="text-xs text-muted-foreground mt-1">Your simulated coin balance</p>
+            </div>
+            <span className={mining?.activated && mining.botEnabled && getMiningActivityLabel(true, mining.eligibleUntil, clock) === "active"
+              ? "text-xs font-semibold px-3 py-1 rounded-full border border-primary/40 bg-primary/10 text-primary"
+              : "text-xs font-semibold px-3 py-1 rounded-full border border-warning/40 bg-warning/10 text-warning"}>
+              {!mining?.activated
+                ? "Activator required"
+                : getMiningActivityLabel(true, mining.eligibleUntil, clock) !== "active"
+                  ? "Mining paused"
+                  : mining.botEnabled ? "Simulation active" : "Simulation initializing"}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-3 mt-5">
+            <div className="rounded-lg bg-secondary/40 p-3">
+              <div className="text-xs text-muted-foreground">Mining speed</div>
+              <div className="font-semibold text-lg">{getMiningSpeedMultiplier(mining?.qualifiedReferrals ?? 0)}×</div>
+            </div>
+            <div className="rounded-lg bg-secondary/40 p-3">
+              <div className="text-xs text-muted-foreground">Qualified referrals</div>
+              <div className="font-semibold text-lg">{mining?.qualifiedReferrals ?? 0}</div>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground mt-3">
+            Base rate: {SIMULATED_BASE_COINS_PER_HOUR.toFixed(2)} MINE/hour · Current pace: {(SIMULATED_BASE_COINS_PER_HOUR * 24 * getMiningSpeedMultiplier(mining?.qualifiedReferrals ?? 0)).toFixed(2)} MINE/day.
+          </p>
+          <p className="text-xs text-muted-foreground mt-2">
+            Simulated mining accrues automatically while your activation and 24-hour sign-in window are valid.
+            {mining?.eligibleUntil ? " Current eligibility ends " + new Date(mining.eligibleUntil).toLocaleString() + "." : ""}
+            {mining?.activated && !mining.botEnabled ? " The simulated mining engine is initializing." : ""}
+          </p>
+          {!mining?.activated && (
+            <Button asChild variant="outline" size="sm" className="mt-3">
+              <Link to="/upgrade">View Mining Activator</Link>
+            </Button>
+          )}
+        </Card>
+
         {/* Stats row */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5">
           <MiniStat icon={Wallet} label="Locked" value={format(profile.locked_balance)} />
@@ -158,7 +248,7 @@ const Dashboard = () => {
           <Button asChild variant="outline" size="lg" className="h-20 flex-col gap-2 hover:border-primary/50">
             <Link to="/upgrade">
               <ArrowUpRight className="h-5 w-5 text-primary" />
-              <span>Upgrade</span>
+              <span>Mining Activator</span>
             </Link>
           </Button>
           <Button asChild variant="outline" size="lg" className="h-20 flex-col gap-2 hover:border-primary/50">
@@ -199,8 +289,8 @@ const Dashboard = () => {
               <Users className="h-6 w-6 text-primary" />
             </div>
             <div className="flex-1">
-              <div className="font-display text-lg font-semibold">Refer & Earn</div>
-              <div className="text-sm text-muted-foreground">Invite friends and earn bonuses when they upgrade.</div>
+              <div className="font-display text-lg font-semibold">Grow your mining speed</div>
+              <div className="text-sm text-muted-foreground">Qualified referrals increase your mining multiplier. No direct referral coin bonuses.</div>
             </div>
             <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
           </Card>

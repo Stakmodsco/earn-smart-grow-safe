@@ -63,6 +63,7 @@ const Payment = () => {
   const { format, meta, setOverride } = useCurrency();
   const { country: geoCountry } = useGeoCountry();
   const { level } = useParams();
+  const isMiningActivation = level === "activator";
   const targetLevel = Number(level);
   const [settings, setSettings] = useState<any>(null);
   // ISO-2 of the country the user *says* they live in (drives currency + scope).
@@ -121,15 +122,23 @@ const Payment = () => {
 
   useEffect(() => {
     if (!user) return;
-    supabase
-      .from("transactions")
+    if (isMiningActivation) {
+      supabase.from("mining_activations")
+        .select("id,status,created_at")
+        .eq("user_id", user.id)
+        .eq("status", "pending")
+        .maybeSingle()
+        .then(({ data }) => setPendingUpgrade(data ?? null));
+      return;
+    }
+    supabase.from("transactions")
       .select("id,target_level,created_at")
       .eq("user_id", user.id)
       .eq("type", "upgrade")
       .eq("status", "pending")
       .maybeSingle()
       .then(({ data }) => setPendingUpgrade(data ?? null));
-  }, [user]);
+  }, [user, isMiningActivation]);
 
   // Auto-fill the residence selector from IP geolocation on first load.
   useEffect(() => {
@@ -184,10 +193,10 @@ const Payment = () => {
 
   if (loading) return null;
   if (!user) return <Navigate to="/auth" replace />;
-  if (![1, 2, 3].includes(targetLevel)) return <Navigate to="/upgrade" replace />;
+  if (!isMiningActivation && ![1, 2, 3].includes(targetLevel)) return <Navigate to="/upgrade" replace />;
   if (!profile || !settings) return <div className="min-h-screen"><Navbar /><div className="container py-20 text-center text-muted-foreground">Loading…</div><BottomNav /></div>;
 
-  if (targetLevel <= profile.level) {
+  if (!isMiningActivation && targetLevel <= profile.level) {
     return (
       <div className="min-h-screen"><Navbar />
         <div className="container py-20 text-center max-w-md">
@@ -199,10 +208,10 @@ const Payment = () => {
     );
   }
 
-  const prices = settings.level_prices as Record<string, number>;
-  const usd = Number(prices?.[String(targetLevel)] ?? 0);
+  const prices = (settings.level_prices ?? {}) as Record<string, number>;
+  const usd = isMiningActivation ? 5 : Number(prices?.[String(targetLevel)] ?? 0);
 
-  const planName = ({ 1: "Silver", 2: "Gold", 3: "Platinum" } as any)[targetLevel];
+  const planName = isMiningActivation ? "Mining Activator" : ({ 1: "Silver", 2: "Gold", 3: "Platinum" } as any)[targetLevel];
   const instructions = (settings.payment_instructions ?? {}) as Record<string, Instructions>;
 
   const copy = (txt: string) => {
@@ -222,7 +231,7 @@ const Payment = () => {
 
   const submit = async () => {
     if (pendingUpgrade) {
-      return toast.error("You already have a pending upgrade request. Please wait for admin review before submitting another.");
+      return toast.error(isMiningActivation ? "Your Mining Activator payment is already pending verification." : "You already have a pending upgrade request. Please wait for admin review before submitting another.");
     }
     if (activeCountry.comingSoon || activeMethod.id === "coming_soon") {
       return toast.error("Local payments are not configured for your country yet. Use the International fallback option.");
@@ -283,18 +292,25 @@ const Payment = () => {
       };
       const notesString = JSON.stringify(payload);
 
-      const { data, error } = await supabase.functions.invoke("submit-upgrade", {
-        body: {
-          target_level: targetLevel,
-          payment_method: activeMethod.id,
-          country: activeCountry.id,
-          proof_url: proofPath,
-          notes: notesString,
-        },
-      });
+      const functionName = isMiningActivation ? "submit-mining-activation" : "submit-upgrade";
+      const requestBody = isMiningActivation
+        ? {
+            payment_method: activeMethod.id,
+            country: activeCountry.id,
+            proof_path: proofPath,
+            notes: notesString,
+          }
+        : {
+            target_level: targetLevel,
+            payment_method: activeMethod.id,
+            country: activeCountry.id,
+            proof_url: proofPath,
+            notes: notesString,
+          };
+      const { data, error } = await supabase.functions.invoke(functionName, { body: requestBody });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast.success("Payment submitted — your upgrade is pending review");
+      toast.success(isMiningActivation ? "Mining Activator payment submitted for verification" : "Payment submitted — your upgrade is pending review");
       navigate("/upgrade");
     } catch (e: any) {
       toast.error(e.message ?? "Failed");
@@ -448,14 +464,14 @@ const Payment = () => {
       <div className="container max-w-2xl py-10">
         <div className="flex flex-wrap gap-2 mb-4">
           <Button asChild variant="ghost" size="sm"><Link to="/dashboard"><ArrowLeft className="h-4 w-4 mr-1" /> Dashboard</Link></Button>
-          <Button asChild variant="ghost" size="sm"><Link to="/upgrade"><ArrowLeft className="h-4 w-4 mr-1" /> Change tier</Link></Button>
+          <Button asChild variant="ghost" size="sm"><Link to="/upgrade"><ArrowLeft className="h-4 w-4 mr-1" /> {isMiningActivation ? "Mining overview" : "Change tier"}</Link></Button>
         </div>
         <div className="text-xs uppercase tracking-widest text-primary mb-2">Complete your payment</div>
-        <h1 className="font-display text-4xl font-semibold mb-2">Upgrade to {planName}</h1>
-        <p className="text-muted-foreground mb-8">Pick your country, choose a payment method, then submit your details.</p>
+        <h1 className="font-display text-4xl font-semibold mb-2">{isMiningActivation ? "Activate automated mining" : "Upgrade to " + planName}</h1>
+        <p className="text-muted-foreground mb-8">Pick your country, choose a payment method, then submit your payment proof for verification.</p>
 
         <Card className="glass-card p-6 rounded-xl text-center mb-6">
-          <div className="text-xs uppercase tracking-wide text-muted-foreground">Plan: {planName}</div>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">{isMiningActivation ? "One-time Mining Activator" : "Plan: " + planName}</div>
           <div className="font-display text-5xl font-semibold mt-2">{format(usd, { decimals: 0 })}</div>
           <div className="text-xs text-muted-foreground mt-3">
             Displayed in your selected country currency ({meta.code}).
@@ -465,7 +481,7 @@ const Payment = () => {
         {pendingUpgrade && (
           <Card className="glass-card p-4 rounded-xl mb-4 border-warning/40 text-sm">
             <div className="font-medium">Pending upgrade request</div>
-            <div className="text-muted-foreground mt-1">You already submitted an upgrade for Level {pendingUpgrade.target_level}. Wait for admin approval or rejection before submitting another payment.</div>
+            <div className="text-muted-foreground mt-1">{isMiningActivation ? "You already submitted a Mining Activator payment. Wait for verification before submitting another." : "You already submitted an upgrade for Level " + pendingUpgrade.target_level + ". Wait for admin approval or rejection before submitting another payment."}</div>
           </Card>
         )}
 

@@ -68,6 +68,136 @@ export type Database = {
         }
         Relationships: []
       }
+      mining_bot_config: {
+        Row: {
+          base_coins_per_hour: number
+          enabled: boolean
+          reward_asset_symbol: string | null
+          reward_coin_price_usd: number
+          singleton: boolean
+          updated_at: string
+        }
+        Insert: {
+          base_coins_per_hour?: number
+          enabled?: boolean
+          reward_asset_symbol?: string | null
+          reward_coin_price_usd?: number
+          singleton?: boolean
+          updated_at?: string
+        }
+        Update: {
+          base_coins_per_hour?: number
+          enabled?: boolean
+          reward_asset_symbol?: string | null
+          reward_coin_price_usd?: number
+          singleton?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      mining_activations: {
+        Row: {
+          amount_usd: number
+          created_at: string
+          id: string
+          payment_country: string | null
+          payment_method: string | null
+          payment_notes: string | null
+          payment_reference: string | null
+          proof_path: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          verified_at: string | null
+        }
+        Insert: {
+          amount_usd?: number
+          created_at?: string
+          id?: string
+          payment_country?: string | null
+          payment_method?: string | null
+          payment_notes?: string | null
+          payment_reference?: string | null
+          proof_path?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          verified_at?: string | null
+        }
+        Update: {
+          amount_usd?: number
+          created_at?: string
+          id?: string
+          payment_country?: string | null
+          payment_method?: string | null
+          payment_notes?: string | null
+          payment_reference?: string | null
+          proof_path?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          verified_at?: string | null
+        }
+        Relationships: []
+      }
+      mining_activity: {
+        Row: {
+          eligible_until: string | null
+          last_sign_in_at: string | null
+          paused_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          eligible_until?: string | null
+          last_sign_in_at?: string | null
+          last_rewarded_at?: string | null
+          paused_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          eligible_until?: string | null
+          last_sign_in_at?: string | null
+          paused_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      referral_qualifications: {
+        Row: {
+          activation_id: string
+          id: string
+          qualified_at: string
+          referred_user_id: string
+          referrer_id: string
+        }
+        Insert: {
+          activation_id: string
+          id?: string
+          qualified_at?: string
+          referred_user_id: string
+          referrer_id: string
+        }
+        Update: {
+          activation_id?: string
+          id?: string
+          qualified_at?: string
+          referred_user_id?: string
+          referrer_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           balance: number
@@ -348,6 +478,42 @@ export type Database = {
         }
         Relationships: []
       }
+      trading_capital_accounts: {
+        Row: {
+          available_capital_usd: number
+          created_at: string
+          deployed_capital_usd: number
+          fees_usd: number
+          initial_capital_usd: number
+          realized_pnl_usd: number
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          available_capital_usd?: number
+          created_at?: string
+          deployed_capital_usd?: number
+          fees_usd?: number
+          initial_capital_usd?: number
+          realized_pnl_usd?: number
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          available_capital_usd?: number
+          created_at?: string
+          deployed_capital_usd?: number
+          fees_usd?: number
+          initial_capital_usd?: number
+          realized_pnl_usd?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           amount: number
@@ -479,7 +645,14 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      mining_reward_balances: {
+        Row: {
+          asset_symbol: string
+          balance: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       bootstrap_first_admin: { Args: never; Returns: boolean }
