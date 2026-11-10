@@ -6,13 +6,13 @@ import {
 
 describe("simulated mining accrual", () => {
   it("accrues the configured base rate over elapsed eligible time", () => {
-    expect(calculateSimulatedMiningCoins(3600, 1)).toBeCloseTo(0.05, 12);
-    expect(calculateSimulatedMiningCoins(86400, 1)).toBeCloseTo(1.2, 12);
+    expect(calculateSimulatedMiningCoins(3600, 1)).toBeCloseTo(1.78, 12);
+    expect(calculateSimulatedMiningCoins(86400, 1)).toBeCloseTo(42.72, 12);
   });
 
   it("multiplies accrual using qualified referral speed tiers", () => {
-    expect(calculateSimulatedMiningCoins(86400, 2)).toBeCloseTo(2.4, 12);
-    expect(calculateSimulatedMiningCoins(86400, 5)).toBeCloseTo(6, 12);
+    expect(calculateSimulatedMiningCoins(86400, 2)).toBeCloseTo(85.44, 12);
+    expect(calculateSimulatedMiningCoins(86400, 5)).toBeCloseTo(213.6, 12);
   });
 
   it("does not accrue for zero or negative eligible time", () => {
