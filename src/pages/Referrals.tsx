@@ -61,7 +61,7 @@ const Referrals = () => {
         <div className="text-xs uppercase tracking-widest text-primary mb-2">Referral network</div>
         <h1 className="font-display text-4xl font-semibold mb-2">Grow your mining speed</h1>
         <p className="text-sm text-muted-foreground mb-6">
-          Qualified referrals increase your mining speed multiplier. Referrals do not generate direct coin bonuses or trading capital.
+          Qualified referrals increase your mining speed multiplier. They do not add coins directly to your balance.
         </p>
 
         <ShareLinkCard code={profile.referral_code} />
