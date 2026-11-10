@@ -22,22 +22,25 @@ const Upgrade = () => {
   const [miningActivity, setMiningActivity] = useState<{ status: string; eligible_until: string | null } | null>(null);
   const [busy, setBusy] = useState(true);
 
-  const load = async () => {
-    if (!user) return;
-    const [a, m] = await Promise.all([
-      supabase.from("mining_activations").select("id,status,amount_usd,created_at,verified_at").eq("user_id", user.id).maybeSingle(),
-      supabase.from("mining_activity").select("status,eligible_until").eq("user_id", user.id).maybeSingle(),
-    ]);
-    setActivation(a.data as Activation | null);
-    setMiningActivity(m.data);
-    setBusy(false);
-  };
-
   useEffect(() => {
     if (!user) return;
+    let cancelled = false;
+    const load = async () => {
+      const [a, m] = await Promise.all([
+        supabase.from("mining_activations").select("id,status,amount_usd,created_at,verified_at").eq("user_id", user.id).maybeSingle(),
+        supabase.from("mining_activity").select("status,eligible_until").eq("user_id", user.id).maybeSingle(),
+      ]);
+      if (cancelled) return;
+      setActivation(a.data as Activation | null);
+      setMiningActivity(m.data);
+      setBusy(false);
+    };
     load();
     const interval = window.setInterval(load, 10_000);
-    return () => window.clearInterval(interval);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
   }, [user]);
 
   if (loading) return null;
