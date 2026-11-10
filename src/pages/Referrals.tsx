@@ -13,6 +13,7 @@ import { getMiningSpeedMultiplier } from "@/lib/mining";
 
 type ReferralRow = {
   id: string;
+  child_user: string;
   created_at: string;
   child?: { email?: string | null; full_name?: string | null } | null;
 };
@@ -30,7 +31,7 @@ const Referrals = () => {
       const [referralResult, qualificationResult] = await Promise.all([
         supabase
           .from("referrals")
-          .select("id,created_at,child:profiles!referrals_child_user_fkey(email,full_name)")
+          .select("id,child_user,created_at,child:profiles!referrals_child_user_fkey(email,full_name)")
           .eq("parent_user", user.id)
           .eq("depth", 1)
           .order("created_at", { ascending: false }),
@@ -94,7 +95,7 @@ const Referrals = () => {
           ) : (
             <div className="divide-y divide-border">
               {refs.map((ref) => {
-                const qualified = qualifiedIds.has((ref as any).child_user);
+                const qualified = qualifiedIds.has(ref.child_user);
                 return (
                   <div key={ref.id} className="py-3 flex items-center justify-between gap-3 text-sm">
                     <div className="min-w-0">
