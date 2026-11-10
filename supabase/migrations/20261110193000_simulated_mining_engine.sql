@@ -13,7 +13,7 @@ update public.mining_rewards
  where funding_id is not null
    and reward_mode = 'simulated';
 
--- A modest, deterministic base rate: 0.05 MINE units/hour (1.2/day at 1x).
+-- Benchmark-based simulation rate: 1.78 MINE units/hour (42.72/day at 1x).
 -- Referral tiers multiply this rate: +1x per 10 verified, activated referrals.
 insert into public.mining_bot_config (
   singleton,
@@ -26,14 +26,14 @@ insert into public.mining_bot_config (
   true,
   true,
   'MINE',
-  0.05,
+  1.78,
   0.01,
   now()
 )
 on conflict (singleton) do update
   set enabled = true,
       reward_asset_symbol = 'MINE',
-      base_coins_per_hour = 0.05,
+      base_coins_per_hour = 1.78,
       reward_coin_price_usd = 0.01,
       updated_at = now();
 
