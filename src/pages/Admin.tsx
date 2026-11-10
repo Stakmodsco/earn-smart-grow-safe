@@ -18,6 +18,8 @@ const Admin = () => {
   const isAdmin = useIsAdmin(user?.id);
   const [adminCheckDone, setAdminCheckDone] = useState(false);
   const [upgrades, setUpgrades] = useState<any[]>([]);
+  const [activations, setActivations] = useState<any[]>([]);
+  const [activationReferences, setActivationReferences] = useState<Record<string, string>>({});
   const [withdrawals, setWithdrawals] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [settings, setSettings] = useState<any>({});
@@ -30,13 +32,15 @@ const Admin = () => {
   }, [loading]);
 
   const loadAll = async () => {
-    const [u, w, p, s] = await Promise.all([
+    const [u, w, p, s, a] = await Promise.all([
       supabase.from("transactions").select("*, profiles!inner(email, full_name, level)").eq("type", "upgrade").order("created_at", { ascending: false }).limit(50),
       supabase.from("withdrawals").select("*, profiles!inner(email, full_name, level)").order("requested_at", { ascending: false }).limit(50),
       supabase.from("profiles").select("*").order("created_at", { ascending: false }).limit(50),
       supabase.from("app_settings").select("*"),
+      supabase.from("mining_activations").select("*").order("created_at", { ascending: false }).limit(100),
     ]);
     setUpgrades(u.data ?? []);
+    setActivations(a.data ?? []);
     setWithdrawals(w.data ?? []);
     setUsers(p.data ?? []);
     const map: any = {}; s.data?.forEach((r: any) => (map[r.key] = r.value)); setSettings(map);
@@ -53,6 +57,19 @@ const Admin = () => {
     const { data, error } = await supabase.functions.invoke("admin-review-upgrade", { body: { transaction_id: id, action } });
     if (error || data?.error) return toast.error(error?.message ?? data.error);
     toast.success(`Upgrade ${action}d`);
+    loadAll();
+  };
+
+  const reviewActivation = async (id: string, action: "confirm" | "reject") => {
+    const paymentReference = (activationReferences[id] ?? "").trim();
+    if (action === "confirm" && paymentReference.length < 4) {
+      return toast.error("Enter the independently verified bank or provider transaction reference first.");
+    }
+    const { data, error } = await supabase.functions.invoke("admin-review-mining-activation", {
+      body: { activation_id: id, action, payment_reference: paymentReference },
+    });
+    if (error || data?.error) return toast.error(error?.message ?? data.error);
+    toast.success(action === "confirm" ? "Mining Activator verified" : "Mining Activator rejected");
     loadAll();
   };
 
@@ -95,6 +112,7 @@ const Admin = () => {
         <Tabs defaultValue="upgrades">
           <TabsList className="mb-6 flex-wrap h-auto">
             <TabsTrigger value="upgrades">Upgrades <Pill>{pendingUpgrades.length}</Pill></TabsTrigger>
+            <TabsTrigger value="activations">Mining Activators <Pill>{activations.filter((a) => a.status === "pending").length}</Pill></TabsTrigger>
             <TabsTrigger value="withdrawals">Withdrawals <Pill>{pendingWithdrawals.length}</Pill></TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="tasks">Tasks</TabsTrigger>
@@ -131,6 +149,55 @@ const Admin = () => {
                       </Td>
                     </tr>))}</tbody>
                 </table>
+              )}
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="activations">
+            <Card className="glass-card p-6 rounded-xl">
+              <div className="text-sm text-muted-foreground mb-4">
+                Confirm only after independently matching the payment against the bank, mobile-money provider or blockchain settlement record. A screenshot alone is not settlement verification.
+              </div>
+              {activations.length === 0 ? <Empty label="No Mining Activator submissions yet" /> : (
+                <div className="space-y-4">
+                  {activations.map((activation) => (
+                    <div key={activation.id} className="rounded-xl border border-border p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <div className="font-semibold">$5 Mining Activator</div>
+                          <div className="text-xs text-muted-foreground mt-1">User: {activation.user_id}</div>
+                          <div className="text-xs text-muted-foreground">Method: {activation.payment_method} · Country: {activation.payment_country}</div>
+                          <div className="text-xs text-muted-foreground">Submitted: {new Date(activation.created_at).toLocaleString()}</div>
+                          <div className="mt-2"><StatusBadge status={activation.status} /></div>
+                        </div>
+                        {activation.proof_path && (
+                          <Button size="sm" variant="outline" onClick={() => viewProof(activation.proof_path)}>
+                            <Eye className="h-4 w-4 mr-1" /> View proof
+                          </Button>
+                        )}
+                      </div>
+                      {activation.payment_notes && (
+                        <pre className="text-xs text-muted-foreground whitespace-pre-wrap mt-3">{activation.payment_notes}</pre>
+                      )}
+                      {activation.status === "pending" && (
+                        <div className="mt-4 grid sm:grid-cols-[1fr_auto_auto] gap-2">
+                          <Input
+                            value={activationReferences[activation.id] ?? ""}
+                            onChange={(e) => setActivationReferences((current) => ({ ...current, [activation.id]: e.target.value }))}
+                            placeholder="Verified bank/provider transaction reference"
+                            maxLength={128}
+                          />
+                          <Button size="sm" variant="soft" onClick={() => reviewActivation(activation.id, "confirm")}>
+                            <Check className="h-4 w-4 mr-1" /> Verify & activate
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => reviewActivation(activation.id, "reject")}>
+                            <X className="h-4 w-4 mr-1" /> Reject
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               )}
             </Card>
           </TabsContent>
