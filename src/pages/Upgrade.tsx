@@ -60,15 +60,8 @@ const Upgrade = () => {
         <div className="text-xs uppercase tracking-widest text-primary mb-2">Mining activation</div>
         <h1 className="font-display text-4xl font-semibold mb-3">Automated mining</h1>
         <p className="text-muted-foreground mb-8">
-          Activate your account once. The server tracks your eligibility and any rewards backed by confirmed trading proceeds while you are away.
+          Activate your mining dashboard once and watch your coin balance grow automatically while your account remains eligible.
         </p>
-
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 mb-6 text-sm">
-          <div className="font-semibold mb-1">Important trading and reward information</div>
-          <p className="text-muted-foreground">
-            This is not proof-of-work cryptocurrency mining. The $5 activation is allocated to your individually tracked trading-capital ledger. Trading can lose money, and rewards are not guaranteed; reward accrual is disabled unless confirmed realized trading proceeds are available.
-          </p>
-        </div>
 
         <Card className="glass-card p-7 rounded-2xl mb-6">
           <div className="flex items-center gap-4 mb-5">
@@ -86,7 +79,7 @@ const Upgrade = () => {
           ) : confirmed ? (
             <div className="rounded-xl border border-primary/30 bg-primary/10 p-4">
               <div className="flex items-center gap-2 font-semibold text-primary"><CheckCircle2 className="h-5 w-5" /> Mining Activator confirmed</div>
-              <p className="text-sm text-muted-foreground mt-2">Your $5 activation has been verified. Mining eligibility follows your 24-hour sign-in window.</p>
+              <p className="text-sm text-muted-foreground mt-2">Your activation is confirmed. Your mining dashboard is ready; sign in at least once every 24 hours to keep mining active.</p>
               <div className="text-sm mt-3">Current bot status: <strong>{miningActivity?.status === "active" && miningActivity.eligible_until && new Date(miningActivity.eligible_until).getTime() > Date.now() ? "Active" : "Paused"}</strong></div>
               {miningActivity?.eligible_until && <div className="text-xs text-muted-foreground mt-1">Eligible until {new Date(miningActivity.eligible_until).toLocaleString()}</div>}
             </div>
@@ -102,7 +95,7 @@ const Upgrade = () => {
               <p className="text-sm text-muted-foreground mt-2">Please review your payment details and submit a new proof. Existing account records remain unchanged.</p>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">Your account has not been activated yet. The full $5 is allocated to your individually tracked trading capital after payment verification.</p>
+            <p className="text-sm text-muted-foreground">Your account has not been activated yet. Complete the one-time $5 activation to start your mining dashboard.</p>
           )}
 
           {!confirmed && !pending && (
@@ -115,7 +108,7 @@ const Upgrade = () => {
         <Card className="glass-card p-6 rounded-xl">
           <h2 className="font-display text-xl font-semibold mb-3">How activity works</h2>
           <ul className="space-y-2 text-sm text-muted-foreground">
-            <li>• Bots operate on the server; your browser does not need to remain open.</li>
+            <li>• Mining simulation runs automatically on the server; your browser does not need to remain open.</li>
             <li>• A successful sign-in keeps your mining eligibility active for 24 hours.</li>
             <li>• If 24 hours pass without another sign-in, mining pauses automatically.</li>
             <li>• Signing in again resumes eligibility; paused time is never credited retroactively.</li>
