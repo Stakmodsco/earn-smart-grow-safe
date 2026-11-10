@@ -46,6 +46,11 @@ declare
   v_activity record;
   v_referrals integer;
   v_multiplier numeric(8,2);
+  v_boundary record;
+  v_segment_start timestamptz;
+  v_segment_seconds integer;
+  v_weighted_seconds numeric(28,8);
+  v_effective_multiplier numeric(8,4);
   v_start timestamptz;
   v_end timestamptz;
   v_seconds integer;
@@ -108,16 +113,55 @@ begin
       continue;
     end if;
 
+    -- Apply each referral milestone only from the moment it qualified.
+    -- This prevents a newly qualified referral from increasing earlier accrual.
     select count(*)::integer
       into v_referrals
       from public.referral_qualifications
-     where referrer_id = v_activity.user_id;
+     where referrer_id = v_activity.user_id
+       and qualified_at <= v_start;
 
     v_multiplier := greatest(1, floor(v_referrals::numeric / 10) + 1);
+    v_segment_start := v_start;
+    v_weighted_seconds := 0;
+
+    for v_boundary in
+      with ranked_milestones as (
+        select
+          qualified_at,
+          row_number() over (order by qualified_at, id) as milestone_number
+        from public.referral_qualifications
+        where referrer_id = v_activity.user_id
+          and qualified_at > v_start
+          and qualified_at <= v_end
+      )
+      select qualified_at, count(*)::integer as multiplier_increments
+        from ranked_milestones
+       where milestone_number % 10 = 0
+       group by qualified_at
+       order by qualified_at
+    loop
+      v_segment_seconds := greatest(
+        0,
+        floor(extract(epoch from (v_boundary.qualified_at - v_segment_start)))::integer
+      );
+      v_weighted_seconds := v_weighted_seconds
+        + (v_segment_seconds::numeric * v_multiplier);
+      v_segment_start := v_boundary.qualified_at;
+      v_multiplier := v_multiplier + v_boundary.multiplier_increments;
+    end loop;
+
+    v_segment_seconds := greatest(
+      0,
+      floor(extract(epoch from (v_end - v_segment_start)))::integer
+    );
+    v_weighted_seconds := v_weighted_seconds
+      + (v_segment_seconds::numeric * v_multiplier);
+    v_effective_multiplier := v_weighted_seconds / greatest(v_seconds, 1);
+
     v_coins := round(
       v_config.base_coins_per_hour
-      * (v_seconds::numeric / 3600)
-      * v_multiplier,
+      * (v_weighted_seconds / 3600),
       12
     );
 
@@ -146,7 +190,7 @@ begin
           extract(epoch from v_end)::bigint
         ),
         v_seconds,
-        v_multiplier,
+        v_effective_multiplier,
         v_config.base_coins_per_hour,
         'simulated'
       )
