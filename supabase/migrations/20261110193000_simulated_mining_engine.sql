@@ -132,12 +132,12 @@ begin
           row_number() over (order by qualified_at, id) as milestone_number
         from public.referral_qualifications
         where referrer_id = v_activity.user_id
-          and qualified_at > v_start
-          and qualified_at <= v_end
       )
       select qualified_at, count(*)::integer as multiplier_increments
         from ranked_milestones
        where milestone_number % 10 = 0
+         and qualified_at > v_start
+         and qualified_at <= v_end
        group by qualified_at
        order by qualified_at
     loop
