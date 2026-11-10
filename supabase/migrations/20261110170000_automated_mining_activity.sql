@@ -211,7 +211,9 @@ revoke all on function app_private.handle_new_user() from public, anon, authenti
 
 -- Install a database-side expiry worker. It does not depend on a browser being open.
 create extension if not exists pg_cron with schema pg_catalog;
-do $$
+grant usage on schema cron to postgres;
+grant all privileges on all tables in schema cron to postgres;
+do $
 begin
   if exists (select 1 from pg_extension where extname = 'pg_cron') then
     begin
@@ -263,6 +265,7 @@ as $$
 declare
   v_config public.mining_bot_config%rowtype;
   v_activity record;
+  v_work record;
   v_funding record;
   v_referrals integer;
   v_multiplier numeric(8,2);
@@ -270,6 +273,10 @@ declare
   v_end timestamptz;
   v_seconds integer;
   v_requested_coins numeric(28,12);
+  v_requested_usd numeric(28,8);
+  v_total_requested_usd numeric(28,8);
+  v_total_available_usd numeric(28,8);
+  v_scale numeric(28,12);
   v_remaining_usd numeric(28,8);
   v_take_usd numeric(28,8);
   v_coins numeric(28,12);
@@ -286,6 +293,17 @@ begin
     return 0;
   end if;
 
+  create temporary table if not exists mining_cycle_work (
+    user_id uuid,
+    start_at timestamptz,
+    end_at timestamptz,
+    eligible_seconds integer,
+    applied_multiplier numeric(8,2),
+    requested_usd numeric(28,8)
+  ) on commit drop;
+  truncate table pg_temp.mining_cycle_work;
+
+  -- Lock all eligible accounts first, then calculate their share of this cycle.
   for v_activity in
     select ma.user_id, ma.last_sign_in_at, ma.eligible_until, ma.last_rewarded_at
       from public.mining_activity ma
@@ -307,25 +325,45 @@ begin
     v_seconds := greatest(0, floor(extract(epoch from (v_end - v_start)))::integer);
 
     if v_seconds <= 0 then
-      if v_activity.eligible_until <= v_now then
-        update public.mining_activity
-           set status = 'paused',
-               paused_at = coalesce(paused_at, eligible_until),
-               updated_at = v_now
-         where user_id = v_activity.user_id;
-      end if;
       continue;
     end if;
 
     select count(*)::integer into v_referrals
       from public.referral_qualifications
      where referrer_id = v_activity.user_id;
-
     v_multiplier := greatest(1, floor(v_referrals::numeric / 10) + 1);
 
     v_requested_coins :=
       v_config.base_coins_per_hour * (v_seconds::numeric / 3600) * v_multiplier;
-    v_remaining_usd := v_requested_coins * v_config.reward_coin_price_usd;
+    v_requested_usd := v_requested_coins * v_config.reward_coin_price_usd;
+
+    insert into pg_temp.mining_cycle_work (
+      user_id, start_at, end_at, eligible_seconds, applied_multiplier, requested_usd
+    ) values (
+      v_activity.user_id, v_start, v_end, v_seconds, v_multiplier, v_requested_usd
+    );
+  end loop;
+
+  select coalesce(sum(requested_usd), 0)
+    into v_total_requested_usd
+    from pg_temp.mining_cycle_work;
+  select coalesce(sum(available_usd), 0)
+    into v_total_available_usd
+    from public.mining_reward_funding
+   where status = 'confirmed' and available_usd > 0;
+
+  if v_total_requested_usd <= 0 or v_total_available_usd <= 0 then
+    return 0;
+  end if;
+
+  -- Share limited proceeds proportionally across all eligible users; no
+  -- account gets priority merely because its UUID sorts first.
+  v_scale := least(1, v_total_available_usd / v_total_requested_usd);
+
+  for v_work in
+    select * from pg_temp.mining_cycle_work order by user_id
+  loop
+    v_remaining_usd := round(v_work.requested_usd * v_scale, 8);
 
     for v_funding in
       select id, available_usd
@@ -348,13 +386,13 @@ begin
         user_id, asset_symbol, amount, funding_id, idempotency_key,
         eligible_seconds, applied_multiplier, base_rate
       ) values (
-        v_activity.user_id,
+        v_work.user_id,
         v_config.reward_asset_symbol,
         v_coins,
         v_funding.id,
-        concat(v_activity.user_id, ':', v_start, ':', v_end, ':', v_funding.id),
-        v_seconds,
-        v_multiplier,
+        concat(v_work.user_id, ':', v_work.start_at, ':', v_work.end_at, ':', v_funding.id),
+        v_work.eligible_seconds,
+        v_work.applied_multiplier,
         v_config.base_coins_per_hour
       )
       on conflict (idempotency_key) do nothing;
@@ -362,14 +400,12 @@ begin
       v_remaining_usd := v_remaining_usd - v_take_usd;
     end loop;
 
-    -- Advance the cursor even when proceeds are exhausted: unfunded time is
-    -- not banked or paid retroactively in a later cycle.
     update public.mining_activity
-       set last_rewarded_at = v_end,
+       set last_rewarded_at = v_work.end_at,
            status = case when eligible_until <= v_now then 'paused' else 'active' end,
            paused_at = case when eligible_until <= v_now then coalesce(paused_at, eligible_until) else null end,
            updated_at = v_now
-     where user_id = v_activity.user_id;
+     where user_id = v_work.user_id;
 
     v_processed := v_processed + 1;
   end loop;
