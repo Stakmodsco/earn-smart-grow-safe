@@ -27,4 +27,5 @@ jobs:
       - name: Run lint
         run: npm run lint
       - name: Build production bundle
+        if: always()
         run: npm run build
