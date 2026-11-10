@@ -60,8 +60,15 @@ const Upgrade = () => {
         <div className="text-xs uppercase tracking-widest text-primary mb-2">Mining activation</div>
         <h1 className="font-display text-4xl font-semibold mb-3">Automated mining</h1>
         <p className="text-muted-foreground mb-8">
-          Activate your account once. Our server-managed bot system handles eligible reward accrual while you are away.
+          Activate your account once. The server tracks your eligibility and any rewards backed by confirmed trading proceeds while you are away.
         </p>
+
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 mb-6 text-sm">
+          <div className="font-semibold mb-1">Important trading and reward information</div>
+          <p className="text-muted-foreground">
+            This is not proof-of-work cryptocurrency mining. The $5 activation is allocated to your individually tracked trading-capital ledger. Trading can lose money, and rewards are not guaranteed; reward accrual is disabled unless confirmed realized trading proceeds are available.
+          </p>
+        </div>
 
         <Card className="glass-card p-7 rounded-2xl mb-6">
           <div className="flex items-center gap-4 mb-5">
