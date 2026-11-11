@@ -68,6 +68,138 @@ export type Database = {
         }
         Relationships: []
       }
+      mine_accounts: {
+        Row: {
+          created_at: string
+          eligible_seconds: number
+          last_accrued_at: string | null
+          mine_balance: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          eligible_seconds?: number
+          last_accrued_at?: string | null
+          mine_balance?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          eligible_seconds?: number
+          last_accrued_at?: string | null
+          mine_balance?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      mine_accruals: {
+        Row: {
+          created_at: string
+          eligible_seconds: number
+          id: string
+          job_run_id: string | null
+          mine_amount: number
+          period_end: string
+          period_start: string
+          qualified_referrals: number
+          speed_multiplier: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          eligible_seconds: number
+          id?: string
+          job_run_id?: string | null
+          mine_amount: number
+          period_end: string
+          period_start: string
+          qualified_referrals: number
+          speed_multiplier: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          eligible_seconds?: number
+          id?: string
+          job_run_id?: string | null
+          mine_amount?: number
+          period_end?: string
+          period_start?: string
+          qualified_referrals?: number
+          speed_multiplier?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      mine_job_runs: {
+        Row: {
+          accrued_users: number
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          processed_users: number
+          started_at: string
+          status: string
+          total_eligible_seconds: number
+        }
+        Insert: {
+          accrued_users?: number
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          processed_users?: number
+          started_at?: string
+          status?: string
+          total_eligible_seconds?: number
+        }
+        Update: {
+          accrued_users?: number
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          processed_users?: number
+          started_at?: string
+          status?: string
+          total_eligible_seconds?: number
+        }
+        Relationships: []
+      }
+      mining_activator_requests: {
+        Row: {
+          id: string
+          proof_path: string
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          submitted_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          proof_path: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          proof_path?: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           balance: number
@@ -492,6 +624,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      process_mining_accrual: { Args: { _job_run_id: string }; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
