@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1794378480824,
+      "tag": "0000_add_isolated_mining_activator_and_accrual",
+      "breakpoints": true
+    }
+  ]
+}
